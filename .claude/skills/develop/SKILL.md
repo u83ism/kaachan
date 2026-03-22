@@ -1,5 +1,5 @@
 ---
-name: develop-workflow
+name: develop
 description: "End-to-end web application development workflow: specification review → implementation → test generation/execution → documentation update. Use when planning or implementing in Japanese."
 ---
 
