@@ -18,6 +18,7 @@ import { eventsValidationRule } from "./implementations/events-validation.js"
 import { crossFolderConcernsRule } from "./implementations/cross-folder-concerns.js"
 import { infrastructureBoundaryRule } from "./implementations/infrastructure-boundary.js"
 import { cqrsEnforcementRule } from "./implementations/cqrs-enforcement.js"
+import { routeInlineRule } from "./implementations/route-inline.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -38,6 +39,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   crossFolderConcernsRule,
   infrastructureBoundaryRule,
   cqrsEnforcementRule,
+  routeInlineRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

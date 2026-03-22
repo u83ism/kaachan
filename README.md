@@ -79,11 +79,24 @@ Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 | Rule ID | Active from | What it detects | Max severity |
 |---|---|---|---|
 | `fat-workflow` | Lv2 | `workflow.ts` exceeding line/function thresholds | warning |
+| `route-inline` | Lv2 | Inline handlers in `route.ts`; auth library imports in `workflow.ts` | warning |
 | `fat-parse` | Lv3 | `parse.ts` exceeding line/function thresholds | warning |
+| `parse-violations` | Lv3 | `parse.ts` importing ORM/repository; `workflow.ts` calling `JSON.parse()` directly | error |
 | `repo-naming` | Lv4 | Non-conventional repository function names; `workflow.ts` importing ORM directly | warning |
-| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `repository` or `client` | error |
+| `repo-orm-leak` | Lv4 | `repository.ts` returning ORM types; `workflow.ts` calling ORM transaction API | warning |
 | `fat-logic` | Lv5 | `logic.ts` exceeding thresholds; domain prefix mixing; non-intersecting type groups | error |
+| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `repository` or `client` | error |
+| `logic-throws` | Lv5 | `throw` statements inside `logic.ts` / `logic/*.ts` | error |
+| `logic-tests` | Lv5–6 (warn) / Lv7+ (error) | Missing test files for `logic.ts` / `logic/*.ts` | error |
 | `dep-direction` | Lv6 | Cross-domain imports; domain referenced from outside `app/`; `shared/` importing domain | error |
+| `app-layer` | Lv6–7 | `app/repository.ts`, `app/client.ts`, `app/logic.ts` presence; `cross-*/app/` imports | error |
+| `client-acl` | Lv6 | `client.ts` accessed from outside `adapter.ts` in same `client/` folder | warning |
+| `fat-routing` | Lv6 | `app/route.ts` size; route definitions in `app/route.ts`; dead or unreachable routes | warning |
+| `nested-domain` | Lv7 | Nested subdomain paths imported from outside their parent domain | error |
+| `events-validation` | Lv8 | `shared/events.ts` types with class properties or missing `type` discriminant | error |
+| `cross-folder-concerns` | Lv8 | `cross-*` folders importing external service packages | warning |
+| `infrastructure-boundary` | Lv9 | ORM imports outside `infrastructure/`; workflows ignoring ports | error |
+| `cqrs-enforcement` | Lv10 | `command/` importing `query/`; query bloat; shared query helpers; query importing logic | error |
 
 ### Severity Escalation
 
