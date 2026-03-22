@@ -115,9 +115,32 @@ export const CreateUserWithAuditWorkflow = async (input: unknown) => {
 
 ## Lv 5 — Logic Layer (Pure Functions + Result Type)
 
-Business logic (Logic) is extracted from Workflow. Logic is a layer of **pure business decisions with no state and no side effects**.
+Business logic (Logic) is extracted from Workflow. Logic is a layer of **pure functions with no state and no side effects**.
 
-Result type (`ok()` / `err()`) is mandatory. `throw` from Logic is prohibited. Workflow receives the Result and may throw.
+Logic functions fall into two categories:
+
+| Type | Description | Return type |
+|---|---|---|
+| **Business judgment** | Evaluates whether a business condition passes or fails | `Result<T, DomainError>` |
+| **Domain calculation / conversion** | Domain-specific computations, formatting, transformations | Plain value (no failure possible) |
+
+Both types are pure functions: no state, no side effects, no DB/API calls. "Result type required for everything" is a misread — Result is required only when the function can fail.
+
+**Key constraint**: Logic **cannot call Store or Client**. Logic inputs must be "resolved data" (primitives or already-fetched values). Workflow fetches from Store, then passes results to Logic.
+
+```ts
+// NG: Logic trying to fetch from Store
+const userCanCreate = async (email: string) => {
+  const user = await findUserByEmail(email)  // Logic must not call Store
+  ...
+}
+
+// OK: Workflow resolves data, Logic receives primitives only
+const exists = await findUserByEmail(email)   // Workflow calls Store
+const check = userCanCreate(!!exists)         // Logic receives boolean
+```
+
+Result type (`ok()` / `err()`) is mandatory for business judgment functions. `throw` from Logic is prohibited. Workflow receives the Result and may throw.
 
 **Domain prefix naming** is required for Logic functions (e.g. `userCan*`, `orderCan*`).
 
@@ -139,6 +162,7 @@ Tests for all Logic functions are required (no test → warning).
 
 ### Kaachan Rules
 - Logic: pure functions only; `throw` prohibited (use Result); no test → warning; domain prefix required
+- Logic: import of Store or Client → error (detectable via import graph analysis)
 - Workflow: no inline logic; size hint at >300 lines / 10 functions
 
 ### Directory Structure at Lv5
@@ -188,11 +212,30 @@ Key concerns:
 - `repository`: naming convention violation → error; query function containing command operation → error
 - Cross-domain references → prohibited
 
+### Routing Co-location
+
+From Lv6, route definitions move **out of `app/route.ts` and into each domain**. `app/route.ts` becomes a pure aggregator (no URL definitions, no middleware).
+
+```ts
+// app/route.ts — aggregation only
+import { userRoutes } from '../domain/user/routes'
+import { orderRoutes } from '../domain/order/routes'
+export const routes = [userRoutes, orderRoutes]
+
+// domain/user/routes.ts — route definitions for this domain
+route.get('/users',     slime.auth(), ListUsersWorkflow)
+route.post('/users',    slime.auth(), CreateUserWorkflow)
+```
+
+**`app/route.ts` growing = signal that domain splitting is insufficient** — Kaachan detects this as a Fat Routing hint.
+
+Reserve `/api/` namespace from day 1 via `route.group({ prefix: '/api' })`. API versioning (`/v1/`) is opt-in — introduce only when breaking changes are needed.
+
 ### Directory Structure at Lv6
 ```
 /src
  ├─ app/
- │    ├─ route.ts
+ │    ├─ route.ts          # aggregation only (no URL definitions)
  │    ├─ parse.ts
  │    ├─ middleware.ts
  │    └─ workflow.ts       # cross-domain orchestration (App layer)
@@ -204,10 +247,12 @@ Key concerns:
  │    ├─ client.ts
  │    └─ adapter.ts        # ACL / mapping logic
  ├─ domainA/
+ │    ├─ routes.ts         # route definitions for this domain
  │    ├─ workflow.ts
  │    ├─ logic.ts
  │    └─ repository.ts
  └─ domainB/
+      ├─ routes.ts
       ├─ workflow.ts
       └─ logic.ts
 ```
@@ -361,4 +406,5 @@ domainUser/
 
 - **Batch / async processing entry points**: FW-internal cron/CLI (in-process) and `@slime/infra-aws` Lambda adapter (serverless) available in parallel at all levels
 - **Fat Parse problem**: `parse.ts` has the same bloat risk as Fat Logic. Same intermediate promotion pattern (`parse/createUser.ts` etc.); threshold/escalation same as Logic; shared schemas allowed, only bloat detected
+- **Fat Routing problem**: `app/route.ts` has the same bloat risk. Addressed via domain co-location (Lv6): routes move to `domain/*/routes.ts`. Kaachan detects route.ts bloat and orphaned routes/workflows via static analysis.
 - **Frontend handling**: Slime acts as API server only. `slime export:schema` + `slime export:openapi` provide type-safe boundaries. `@slime/adapter-nextjs` for tight RSC integration (optional plugin)

@@ -72,8 +72,27 @@ parse/
 
 | Class | Meaning | HTTP Code |
 |---|---|---|
-| **DomainError** | Logic Result err / business-rule violation | 4xx |
-| **TechnicalError** | Uncaught throw / DB failure etc. | 500 |
+| **DomainError** | Logic Result err OR Adapter Result err (external rejection) | 4xx |
+| **TechnicalError** | Uncaught throw / DB failure / network error | 500 |
+
+DomainError originates from two sources:
+1. **Logic** — pure evaluation (e.g. `"USER_ALREADY_EXISTS"`)
+2. **Adapter** — external system rejection translated to domain vocabulary (e.g. `"PAYMENT_DECLINED"`)
+
+Adapter's job is translation only — mapping external error codes to domain error strings. Business judgment (e.g. "3 failed attempts → block account") stays in Logic.
+
+```ts
+// adapter.ts — translation only, no business judgment
+export const chargePayment = async (amount: number): Promise<Result<Receipt, "PAYMENT_DECLINED">> => {
+  try {
+    const res = await stripeClient.charge(amount)
+    return ok(mapToReceipt(res))
+  } catch (e) {
+    if (e.code === 'card_declined') return err("PAYMENT_DECLINED")  // translate → Result.err
+    throw e  // technical error → propagate as throw → 500
+  }
+}
+```
 
 A `slime.config.ts` mapping of DomainError strings → HTTP codes is the single source of truth. Any throws not in the map are automatically treated as TechnicalError (500):
 
@@ -104,10 +123,13 @@ Kaachan performs **cross-domain and cross-layer dependency direction checks** eq
 
 | Rule | Detection Method | Active From |
 |---|---|---|
+| Logic imports Store or Client → error | Import graph analysis | Lv5+ |
 | Cross-domain mutual references prohibited | Import graph analysis | Lv6+ |
 | Domain references allowed only from App | Import graph analysis | Lv6+ |
 | Workflow must not directly import ORM | Import graph analysis | Lv4+ |
 | ORM operations outside infrastructure/ prohibited | Import graph analysis | Lv9+ |
+
+**Detection limits**: Import graph analysis can catch structural violations (wrong import direction). Semantic violations — business rules leaking into wrong layers (e.g. a hardcoded threshold in Store that happens to be a domain rule) — are not detectable by static analysis. The rules file provides AI with business context to catch what Kaachan cannot.
 
 Dependency rules are auto-configured to match the architecture level. When `slime migrate --to-level 7` upgrades the level, the analysis targets automatically expand.
 
@@ -119,6 +141,24 @@ Dependency rules are auto-configured to match the architecture level. When `slim
 | Implement independently in Kaachan | Easy integration with Slime-specific level-linked rule system |
 
 **Current direction**: Embedding `dependency-cruiser` is the leading candidate. Slime-specific level-linked rules can be handled by having Slime dynamically generate `dependency-cruiser` configuration files.
+
+---
+
+## Fat Routing Detection
+
+Same structural risk as Fat Logic/Parse exists in `app/route.ts`. From Lv6, route definitions co-locate with domains — `app/route.ts` becomes an aggregator only.
+
+### Escalation
+
+| Condition | Stage |
+|---|---|
+| `app/route.ts` exceeds line/count threshold | Hint — suggest domain co-location (`domain/*/routes.ts`) |
+| Lv6+ and `app/route.ts` still contains route definitions | Warning — move to `domain/*/routes.ts` |
+| Route definition references a Workflow file that does not exist | Warning — dead route candidate |
+| Workflow file exists but is not referenced by any route | Hint — unreachable Workflow candidate |
+| Route has `sunset` date that has passed | Warning — version cleanup overdue |
+
+Note: "dead route" detection via static analysis covers file existence checks only. Actual traffic-based dead route analysis requires runtime access logs — out of Kaachan's scope.
 
 ---
 
