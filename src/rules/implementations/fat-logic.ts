@@ -1,6 +1,7 @@
 import { join } from "node:path"
 import { measureFile } from "../../analysis/line-counter.js"
 import { checkPrefixes } from "../../analysis/prefix-checker.js"
+import { buildTypeDependencyGraph } from "../../analysis/type-dependency-graph.js"
 import type { Diagnostic } from "../../types/diagnostic.js"
 import type { FatThresholds } from "../../types/config.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
@@ -42,6 +43,22 @@ const checkLogicFile = (context: RuleContext): readonly Diagnostic[] => {
     const prefixResult = checkPrefixes(sourceFile)
     if (prefixResult.hasMixing) {
       diagnostics.push(buildPrefixMixingDiagnostic(filePath, "warning", prefixResult.prefixes))
+    }
+
+    const graphResult = buildTypeDependencyGraph(sourceFile)
+    if (graphResult.hasNonIntersecting) {
+      diagnostics.push({
+        ruleId: RULE_ID,
+        severity: "warning",
+        message:
+          "logic.ts has non-intersecting type dependency groups — functions operate on disconnected domains",
+        location: { filePath },
+        details: graphResult.groups.map(
+          (g, i) =>
+            `Group ${String.fromCharCode(65 + i)}: ${g.functions.join(", ")} (${g.types.join(", ")})`,
+        ),
+        suggestion: "Consider splitting into domain-specific files (consistent with prefix naming).",
+      })
     }
   }
 
