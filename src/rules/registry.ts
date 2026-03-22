@@ -13,6 +13,7 @@ import { depDirectionRule } from "./implementations/dep-direction.js"
 import { appLayerRule } from "./implementations/app-layer.js"
 import { clientAclRule } from "./implementations/client-acl.js"
 import { fatRoutingRule } from "./implementations/fat-routing.js"
+import { nestedDomainRule } from "./implementations/nested-domain.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -28,6 +29,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   clientAclRule,
   fatLogicRule,
   fatRoutingRule,
+  nestedDomainRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
