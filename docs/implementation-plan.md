@@ -60,12 +60,14 @@ kaachan/
 
 ## Key Types
 
-```ts
-// ArchitectureLevel — union type (enum is prohibited by code-style rules)
-type ArchitectureLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+`ArchitectureLevel` and `Severity` are imported from `@u83ism/architecture-rules` (the shared package). Do not re-define them locally.
 
-// Severity
-type Severity = "hint" | "warning" | "error"
+```ts
+// ArchitectureLevel — imported from @u83ism/architecture-rules
+// type ArchitectureLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+
+// Severity — imported from @u83ism/architecture-rules
+// type Severity = "hint" | "warning" | "error"
 
 // Diagnostic — primary output unit
 interface Diagnostic {
@@ -195,6 +197,7 @@ Exported: `analyze`, `scanProject`, `detectLevel`, `getRulesForLevel`, `register
   "main": "./dist/core/index.js",
   "bin": { "kaachan": "./dist/cli/index.js" },
   "dependencies": {
+    "@u83ism/architecture-rules": "^0.1.0",
     "commander": "^12.0.0",
     "ts-morph": "^23.0.0",
     "typescript": "^5.4.0"
@@ -207,6 +210,8 @@ Exported: `analyze`, `scanProject`, `detectLevel`, `getRulesForLevel`, `register
 ```
 
 `typescript` is a runtime dependency (ts-morph requires it at runtime to parse target projects).
+
+`@u83ism/architecture-rules` is the shared package that provides `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, and related types/constants. Kaachan imports from it rather than defining these locally.
 
 ---
 

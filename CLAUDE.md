@@ -8,9 +8,6 @@ For project overview, architecture, and implementation plan, read **README.md** 
 - `docs/overview.md` — project overview and Lv1–Lv10 architecture table
 - `docs/implementation-plan.md` — implementation phases, types, CLI interface, project structure
 - `docs/kaachan-design.md` — Kaachan linter specification (rules, thresholds, detection strategies)
-- `docs/slime-architecture.md` — Slime Architecture level-by-level detail
-- `docs/slime-fw.md` — Slime FW features and implementation details
-- `docs/adr.md` — Architecture Decision Records and Q&A
 
 Theory source of truth: https://github.com/u83ism/kaachan-and-slime-docs
 

@@ -10,9 +10,9 @@ description: "Sync the kaachan-and-slime-docs repository, summarize changes, and
 | Repository | Role |
 |---|---|
 | `u83ism/kaachan-and-slime-docs` (GitHub) | **Theory source of truth** — Slime Architecture concept, design rationale, ADRs |
-| `kaachan` (this repo) `docs/` | **Implementation perspective** — implementation plans, design summaries from the developer's viewpoint |
+| `kaachan` (this repo) `docs/` | **Implementation perspective** — implementation plans and design summaries specific to this codebase |
 
-`docs/` files are NOT raw copies of the theory docs. They are implementation-oriented documents that reflect what the theory means for this codebase. When the theory changes, update `docs/` to reflect those implications — not to paste the source verbatim.
+`docs/` contains only implementation-specific documents — not copies of theory docs. When the theory changes, update `docs/` only if it affects Kaachan's implementation details (thresholds, detection strategies, package dependencies, etc.).
 
 `docs/` file mapping:
 
@@ -21,9 +21,6 @@ description: "Sync the kaachan-and-slime-docs repository, summarize changes, and
 | `overview.md` | Project overview and Lv1–10 architecture table |
 | `implementation-plan.md` | Full implementation plan (phases, types, CLI interface, project structure) |
 | `kaachan-design.md` | Kaachan linter specification (rules, thresholds, detection strategies) |
-| `slime-architecture.md` | Slime Architecture level-by-level detail |
-| `slime-fw.md` | Slime FW features and implementation details |
-| `adr.md` | Architecture Decision Records and Q&A |
 
 ## Prerequisites
 
@@ -58,12 +55,13 @@ description: "Sync the kaachan-and-slime-docs repository, summarize changes, and
    - Summarize what changed in each file (added / removed / changed specification, design decisions, constraints).
 
 5. **Update docs/ files**
-   - Read the relevant `docs/` file(s) based on what changed (see mapping table above).
-   - Reflect specification changes from step 4 into the `docs/` files from an **implementation perspective**:
-     - New spec features → add to the relevant section with implementation implications
-     - Changed thresholds / rules → update the corresponding numbers/descriptions
-     - Deleted or renamed concepts → remove or update references
-   - Do NOT paste raw theory text. Translate changes into what they mean for implementation.
+   - Check if the theory changes affect Kaachan's implementation details (thresholds, detection strategies, shared package exports, layer/folder constants, etc.).
+   - If yes, update the relevant `docs/` file(s):
+     - New shared package exports → update `implementation-plan.md` (Key Types / package.json section)
+     - Changed thresholds / rules → update `kaachan-design.md`
+     - Structural changes to Slime Architecture levels → update `overview.md` (architecture table) and `implementation-plan.md` (level detection algorithm)
+   - Do NOT paste raw theory text. Only reflect what directly affects implementation.
+   - If the theory change has no implementation impact on Kaachan, skip this step.
    - Use the Edit tool to apply changes.
 
 6. **Update memory/MEMORY.md**

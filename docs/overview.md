@@ -14,6 +14,12 @@ An architecture evolution theory that **gradually guides developers toward corre
 
 **Goal**: "A functional-programming-influenced, reconstructed Clean Architecture extended with CQRS"
 
+### `@u83ism/architecture-rules` (Shared Package)
+
+An npm package ([`@u83ism/architecture-rules`](https://www.npmjs.com/package/@u83ism/architecture-rules), source: [slime-architecture-rules](https://github.com/u83ism/slime-architecture-rules)) that provides the Slime Architecture knowledge as TypeScript types and constants — `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, etc.
+
+Both Kaachan and Slime FW depend on this package as the Single Source of Truth for architecture rule definitions, preventing any divergence between the two tools.
+
 ### Slime FW (Framework)
 
 A TypeScript web application framework that works alongside Kaachan. Its name comes from its rich migration feature set that supports refactoring and scaling transitions — it changes shape as it grows, like a slime. It also aims to provide standard support for features that typically require user-land implementation, such as authentication, 2FA, idempotency keys, and multi-tenancy.
