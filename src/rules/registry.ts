@@ -4,8 +4,9 @@ import { fatWorkflowRule } from "./implementations/fat-workflow.js"
 import { fatParseRule } from "./implementations/fat-parse.js"
 import { fatLogicRule } from "./implementations/fat-logic.js"
 import { repoNamingRule } from "./implementations/repo-naming.js"
+import { logicImportsRule } from "./implementations/logic-imports.js"
 
-export const BUILT_IN_RULES: readonly Rule[] = [fatWorkflowRule, fatParseRule, repoNamingRule, fatLogicRule]
+export const BUILT_IN_RULES: readonly Rule[] = [fatWorkflowRule, fatParseRule, repoNamingRule, logicImportsRule, fatLogicRule]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
   ...rules,
