@@ -41,7 +41,7 @@ describe("analyze", () => {
     expect(result.value.level).toBe(5)
   })
 
-  it("returns empty diagnostics (Phase 3 — rules not yet wired)", async () => {
+  it("returns empty diagnostics for lv5 fixture without violations", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
