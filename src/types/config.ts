@@ -17,5 +17,7 @@ export interface KaachanConfig {
 
 export interface AnalysisResult {
   readonly level: ArchitectureLevel
+  readonly levelEvidence: readonly string[]
+  readonly missingForNext: readonly string[]
   readonly diagnostics: readonly Diagnostic[]
 }
