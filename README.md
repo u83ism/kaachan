@@ -40,9 +40,60 @@ The opinionated, persistent nature of its feedback is why it is named "Kaachan" 
 ```bash
 npx kaachan               # analyze current directory
 npx kaachan ./src         # analyze specific path
-npx kaachan --level       # show detected level only
-npx kaachan --format json # machine-readable output
+npx kaachan --level       # show detected architecture level and evidence only
+npx kaachan --disable-rule fat-workflow  # skip a specific rule
 ```
+
+### Exit Codes
+
+| Code | Meaning |
+|---|---|
+| `0` | No `error`-severity diagnostics |
+| `1` | One or more `error`-severity diagnostics, or analysis failed |
+
+---
+
+## Architecture Level Detection
+
+Kaachan infers the current level from file-system signals (no AST required):
+
+| Level | Required signals |
+|---|---|
+| Lv1 | `route.ts` |
+| Lv2 | + `workflow.ts` + `middleware.ts` |
+| Lv3 | + `parse.ts` |
+| Lv4 | + `repository.ts` + `client.ts` |
+| Lv5 | + `logic.ts` or `logic/` folder |
+| Lv6 | + `app/` + `shared/` + ≥1 domain folder (`/^domain[A-Z]/`) |
+| Lv7 | + any `cross-` prefixed folder |
+| Lv8 | + `shared/events.ts` |
+| Lv9 | + `infrastructure/` + any domain has `ports.ts` |
+| Lv10 | + any domain has `command/` AND `query/` subfolders |
+
+Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
+
+---
+
+## Rules
+
+| Rule ID | Active from | What it detects | Max severity |
+|---|---|---|---|
+| `fat-workflow` | Lv2 | `workflow.ts` exceeding line/function thresholds | warning |
+| `fat-parse` | Lv3 | `parse.ts` exceeding line/function thresholds | warning |
+| `repo-naming` | Lv4 | Non-conventional repository function names; `workflow.ts` importing ORM directly | warning |
+| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `repository` or `client` | error |
+| `fat-logic` | Lv5 | `logic.ts` exceeding thresholds; domain prefix mixing; non-intersecting type groups | error |
+| `dep-direction` | Lv6 | Cross-domain imports; domain referenced from outside `app/`; `shared/` importing domain | error |
+
+### Severity Escalation
+
+| Severity | Symbol | Meaning |
+|---|---|---|
+| `hint` | `ℹ` | Informational — worth knowing |
+| `warning` | `⚠` | Structural smell — should be addressed |
+| `error` | `✗` | Architecture violation — causes exit code 1 |
+
+---
 
 ## Related Links
 
