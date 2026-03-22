@@ -5,6 +5,7 @@ import { fatParseRule } from "./implementations/fat-parse.js"
 import { parseViolationsRule } from "./implementations/parse-violations.js"
 import { fatLogicRule } from "./implementations/fat-logic.js"
 import { repoNamingRule } from "./implementations/repo-naming.js"
+import { repoAdvancedRule } from "./implementations/repo-advanced.js"
 import { logicImportsRule } from "./implementations/logic-imports.js"
 import { logicThrowsRule } from "./implementations/logic-throws.js"
 import { logicTestsRule } from "./implementations/logic-tests.js"
@@ -15,6 +16,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   fatParseRule,
   parseViolationsRule,
   repoNamingRule,
+  repoAdvancedRule,
   logicImportsRule,
   logicThrowsRule,
   logicTestsRule,
