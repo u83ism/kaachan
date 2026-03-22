@@ -13,6 +13,7 @@ const base: ProjectSnapshot = {
   hasClient: false,
   hasLogic: false,
   hasLogicFolder: false,
+  logicFolderFiles: [],
   hasAppFolder: false,
   hasSharedFolder: false,
   hasInfrastructureFolder: false,

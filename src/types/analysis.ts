@@ -22,6 +22,7 @@ export interface ProjectSnapshot {
   readonly hasClient: boolean
   readonly hasLogic: boolean
   readonly hasLogicFolder: boolean
+  readonly logicFolderFiles: readonly string[]
   readonly hasAppFolder: boolean
   readonly hasSharedFolder: boolean
   readonly hasInfrastructureFolder: boolean

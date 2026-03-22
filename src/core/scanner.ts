@@ -55,6 +55,11 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
   const { files, dirs } = listEntries(sourceRoot)
 
   const hasLogicFolder = dirs.includes("logic")
+  const logicFolderFiles = hasLogicFolder
+    ? listEntries(join(sourceRoot, "logic")).files
+        .filter((f) => f.endsWith(".ts"))
+        .map((f) => join(sourceRoot, "logic", f))
+    : []
   const crossFolders = dirs.filter((d) => d.startsWith("cross-"))
   const domainFolders = dirs
     .filter((d) => DOMAIN_FOLDER_PATTERN.test(d))
@@ -76,6 +81,7 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
       hasClient: files.includes("client.ts"),
       hasLogic: files.includes("logic.ts") || hasLogicFolder,
       hasLogicFolder,
+      logicFolderFiles,
       hasAppFolder: dirs.includes("app"),
       hasSharedFolder: dirs.includes("shared"),
       hasInfrastructureFolder: dirs.includes("infrastructure"),
