@@ -63,7 +63,7 @@ describe("CLI — level detection", () => {
 
 describe("CLI — diagnostic output", () => {
   it("outputs 'No issues found' for a clean project", () => {
-    const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "lv5")])
+    const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "lv5-with-test")])
     expect(exitCode).toBe(0)
     expect(stdout).toContain("No issues found")
   })

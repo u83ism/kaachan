@@ -42,7 +42,7 @@ describe("analyze", () => {
   })
 
   it("returns empty diagnostics for lv5 fixture without violations", async () => {
-    const result = await analyze(makeConfig(join(fixturesDir, "lv5")))
+    const result = await analyze(makeConfig(join(fixturesDir, "lv5-with-test")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.diagnostics).toHaveLength(0)
