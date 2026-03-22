@@ -1,7 +1,7 @@
-export type ArchitectureLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+export type { ArchitectureLevel } from "@u83ism/architecture-rules"
 
 export interface LevelResult {
-  readonly level: ArchitectureLevel
+  readonly level: import("@u83ism/architecture-rules").ArchitectureLevel
   readonly evidence: readonly string[]
   readonly missingForNext: readonly string[]
 }

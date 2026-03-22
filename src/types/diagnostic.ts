@@ -1,4 +1,5 @@
-export type Severity = "hint" | "warning" | "error"
+import type { Severity } from "@u83ism/architecture-rules"
+export type { Severity }
 
 export interface DiagnosticLocation {
   readonly filePath: string

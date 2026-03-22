@@ -1,9 +1,8 @@
 import { readdirSync, existsSync } from "node:fs"
 import { join, relative } from "node:path"
+import { FOLDER_PATTERNS, LAYER_FILES, FOLDER_NAMES, SHARED_EVENTS_FILE } from "@u83ism/architecture-rules"
 import type { DomainFolder, ProjectSnapshot, SourceFileInfo } from "../types/analysis.js"
 import type { Result } from "../types/index.js"
-
-const DOMAIN_FOLDER_PATTERN = /^domain[A-Z]/
 
 type Entries = { readonly files: readonly string[]; readonly dirs: readonly string[] }
 
@@ -38,9 +37,9 @@ const scanDomainFolder = (domainPath: string, name: string): DomainFolder => {
   return {
     name,
     absolutePath: domainPath,
-    hasPorts: files.includes("ports.ts"),
-    hasCommand: dirs.includes("command"),
-    hasQuery: dirs.includes("query"),
+    hasPorts: files.includes(LAYER_FILES.PORTS),
+    hasCommand: dirs.includes(FOLDER_NAMES.COMMAND),
+    hasQuery: dirs.includes(FOLDER_NAMES.QUERY),
   }
 }
 
@@ -54,37 +53,37 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
 
   const { files, dirs } = listEntries(sourceRoot)
 
-  const hasLogicFolder = dirs.includes("logic")
+  const hasLogicFolder = dirs.includes(FOLDER_NAMES.LOGIC)
   const logicFolderFiles = hasLogicFolder
-    ? listEntries(join(sourceRoot, "logic")).files
+    ? listEntries(join(sourceRoot, FOLDER_NAMES.LOGIC)).files
         .filter((f) => f.endsWith(".ts"))
-        .map((f) => join(sourceRoot, "logic", f))
+        .map((f) => join(sourceRoot, FOLDER_NAMES.LOGIC, f))
     : []
-  const crossFolders = dirs.filter((d) => d.startsWith("cross-"))
+  const crossFolders = dirs.filter((d) => d.startsWith(FOLDER_PATTERNS.CROSS_PREFIX))
   const domainFolders = dirs
-    .filter((d) => DOMAIN_FOLDER_PATTERN.test(d))
+    .filter((d) => FOLDER_PATTERNS.DOMAIN.test(d))
     .map((name) => scanDomainFolder(join(sourceRoot, name), name))
 
-  const sharedPath = join(sourceRoot, "shared")
-  const hasSharedEvents = existsSync(join(sharedPath, "events.ts"))
+  const sharedPath = join(sourceRoot, FOLDER_NAMES.SHARED)
+  const hasSharedEvents = existsSync(join(sharedPath, SHARED_EVENTS_FILE))
 
   return {
     ok: true,
     value: {
       rootDir,
       sourceRoot,
-      hasRoute: files.includes("route.ts"),
-      hasWorkflow: files.includes("workflow.ts"),
-      hasMiddleware: files.includes("middleware.ts"),
-      hasParse: files.includes("parse.ts"),
-      hasRepository: files.includes("repository.ts"),
-      hasClient: files.includes("client.ts"),
-      hasLogic: files.includes("logic.ts") || hasLogicFolder,
+      hasRoute: files.includes(LAYER_FILES.ROUTE),
+      hasWorkflow: files.includes(LAYER_FILES.WORKFLOW),
+      hasMiddleware: files.includes(LAYER_FILES.MIDDLEWARE),
+      hasParse: files.includes(LAYER_FILES.PARSE),
+      hasRepository: files.includes(LAYER_FILES.REPOSITORY),
+      hasClient: files.includes(LAYER_FILES.CLIENT),
+      hasLogic: files.includes(LAYER_FILES.LOGIC) || hasLogicFolder,
       hasLogicFolder,
       logicFolderFiles,
-      hasAppFolder: dirs.includes("app"),
-      hasSharedFolder: dirs.includes("shared"),
-      hasInfrastructureFolder: dirs.includes("infrastructure"),
+      hasAppFolder: dirs.includes(FOLDER_NAMES.APP),
+      hasSharedFolder: dirs.includes(FOLDER_NAMES.SHARED),
+      hasInfrastructureFolder: dirs.includes(FOLDER_NAMES.INFRASTRUCTURE),
       crossFolders,
       hasSharedEvents,
       domainFolders,
