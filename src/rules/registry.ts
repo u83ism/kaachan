@@ -10,6 +10,8 @@ import { logicImportsRule } from "./implementations/logic-imports.js"
 import { logicThrowsRule } from "./implementations/logic-throws.js"
 import { logicTestsRule } from "./implementations/logic-tests.js"
 import { depDirectionRule } from "./implementations/dep-direction.js"
+import { appLayerRule } from "./implementations/app-layer.js"
+import { clientAclRule } from "./implementations/client-acl.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -21,6 +23,8 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   logicThrowsRule,
   logicTestsRule,
   depDirectionRule,
+  appLayerRule,
+  clientAclRule,
   fatLogicRule,
 ]
 
