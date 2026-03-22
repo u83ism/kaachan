@@ -15,7 +15,6 @@ const pkg = JSON.parse(
 ) as { version: string }
 
 const DEFAULT_CONFIG = {
-  format: "console" as const,
   disabledRules: [] as readonly string[],
   thresholds: {
     hintLines: 300,
@@ -33,18 +32,15 @@ program
 program.argument("[path]", "Path to analyze (defaults to current directory)", ".")
 
 program.option("--level", "Show detected architecture level and evidence only")
-program.option("--format <format>", "Output format: console | json", "console")
 program.option("--disable-rule <ruleId>", "Disable a specific rule")
 
-program.action(async (pathArg: string, options: { level?: boolean; format?: string; disableRule?: string }) => {
+program.action(async (pathArg: string, options: { level?: boolean; disableRule?: string }) => {
   const rootDir = resolve(pathArg)
-  const format = options.format === "json" ? "json" : "console"
   const disabledRules = options.disableRule != null ? [options.disableRule] : []
 
   const config: KaachanConfig = {
     ...DEFAULT_CONFIG,
     rootDir,
-    format,
     disabledRules,
   }
 

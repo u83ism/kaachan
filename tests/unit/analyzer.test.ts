@@ -12,7 +12,6 @@ const fixturesDir = join(__dirname, "../fixtures")
 
 const makeConfig = (rootDir: string): KaachanConfig => ({
   rootDir,
-  format: "console",
   disabledRules: [],
   thresholds: {
     hintLines: 300,

@@ -11,7 +11,6 @@ const fixturesDir = join(__dirname, "../fixtures")
 
 const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): KaachanConfig => ({
   rootDir,
-  format: "console",
   disabledRules: [],
   thresholds: {
     hintLines: 300,

@@ -269,10 +269,42 @@ Exported: `analyze`, `scanProject`, `detectLevel`, `getRulesForLevel`, `register
 - TypeReference node collection via ts-morph
 - Tests: union-find in isolation first, then full integration with fixture
 
-### Phase 7 — JSON formatter + exit codes + polish
-- `src/cli/formatters/json.ts`
-- Exit code 1 on errors
-- README with usage examples
+### Phase 7 — Lv4 rules: `repo-naming`
+
+Active from Lv4. Import graph analysis via ts-morph `getImportDeclarations()`.
+
+- `src/rules/implementations/repo-naming.ts`
+  - `repository.ts` exported functions: naming convention violation (`find*`/`list*`/`get*`/`count*`/`search*` for reads, `create*`/`save*`/`update*`/`delete*`/`remove*` for writes) → hint
+  - `workflow.ts`: direct ORM import (`prisma`, `drizzle`, etc.) → warning
+- Tests: fixture `tests/fixtures/lv4-violations/` with naming violations and ORM imports
+- Register in `BUILT_IN_RULES`
+
+### Phase 8 — Lv5 rules: import violation detection
+
+Active from Lv5. Detects forbidden imports in the Logic layer.
+
+- `src/rules/implementations/logic-imports.ts`
+  - `logic.ts` / `logic/*.ts` importing `repository.ts` or `client.ts` → error
+  - Detection via ts-morph import graph analysis (no external tooling)
+- Tests: fixture `tests/fixtures/lv5-violations/` with Logic files that import Store/Client
+- Register in `BUILT_IN_RULES`
+
+### Phase 9 — Lv6 rules: cross-domain dependency direction
+
+Active from Lv6. Detects structural violations in the domain era.
+
+- `src/rules/implementations/dep-direction.ts`
+  - Cross-domain direct imports (domainA importing domainB) → error
+  - Domain imported from outside `app/` → error
+  - `shared/` importing from any domain folder → warning
+- Detection via ts-morph import graph analysis across all source files in `ProjectSnapshot.sourceFiles`
+- Tests: fixture `tests/fixtures/lv6-violations/` with cross-domain imports
+- Register in `BUILT_IN_RULES`
+
+### Phase 10 — Integration tests + README
+
+- `tests/integration/cli.test.ts`: spawns `kaachan` process against fixture directories, asserts stdout and exit codes
+- README with usage examples and level table
 
 ---
 

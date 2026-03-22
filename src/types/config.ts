@@ -10,7 +10,6 @@ export interface FatThresholds {
 
 export interface KaachanConfig {
   readonly rootDir: string
-  readonly format: "console" | "json"
   readonly disabledRules: readonly string[]
   readonly thresholds: FatThresholds
 }
