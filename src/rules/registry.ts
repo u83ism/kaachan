@@ -14,6 +14,8 @@ import { appLayerRule } from "./implementations/app-layer.js"
 import { clientAclRule } from "./implementations/client-acl.js"
 import { fatRoutingRule } from "./implementations/fat-routing.js"
 import { nestedDomainRule } from "./implementations/nested-domain.js"
+import { eventsValidationRule } from "./implementations/events-validation.js"
+import { crossFolderConcernsRule } from "./implementations/cross-folder-concerns.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -30,6 +32,8 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   fatLogicRule,
   fatRoutingRule,
   nestedDomainRule,
+  eventsValidationRule,
+  crossFolderConcernsRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
