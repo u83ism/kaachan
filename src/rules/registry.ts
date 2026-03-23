@@ -19,6 +19,7 @@ import { crossFolderConcernsRule } from "./implementations/cross-folder-concerns
 import { infrastructureBoundaryRule } from "./implementations/infrastructure-boundary.js"
 import { cqrsEnforcementRule } from "./implementations/cqrs-enforcement.js"
 import { routeInlineRule } from "./implementations/route-inline.js"
+import { workflowThrowsRule } from "./implementations/workflow-throws.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -40,6 +41,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   infrastructureBoundaryRule,
   cqrsEnforcementRule,
   routeInlineRule,
+  workflowThrowsRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
