@@ -129,7 +129,7 @@ const checkWorkflowTransaction = (context: RuleContext): readonly Diagnostic[] =
       ruleId: RULE_ID,
       severity: "warning",
       message: `workflow.ts calls ORM transaction API ($transaction) directly — use slime.withTransaction() instead`,
-      location: { filePath, line: transactionCalls[0]?.getStartLineNumber() },
+      location: { filePath, ...(transactionCalls[0] != null ? { line: transactionCalls[0].getStartLineNumber() } : {}) },
       suggestion:
         "Replace prisma.$transaction([...]) with slime.withTransaction(async () => { ... }) for framework-managed transactions.",
     },

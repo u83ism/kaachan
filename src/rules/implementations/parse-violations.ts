@@ -66,7 +66,7 @@ const checkWorkflowInlineParse = (
       ruleId: RULE_ID,
       severity: "warning" as const,
       message: `workflow.ts calls JSON.parse() directly — extract input parsing to parse.ts`,
-      location: { filePath, line: jsonParseCalls[0]?.getStartLineNumber() },
+      location: { filePath, ...(jsonParseCalls[0] != null ? { line: jsonParseCalls[0].getStartLineNumber() } : {}) },
       suggestion:
         'Create a typed parse function in parse.ts and call it from workflow.ts instead of using JSON.parse() inline.',
     },

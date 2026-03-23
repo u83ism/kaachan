@@ -14,6 +14,8 @@ const base: ProjectSnapshot = {
   hasLogic: false,
   hasLogicFolder: false,
   logicFolderFiles: [],
+  hasParseFolder: false,
+  parseFolderFiles: [],
   hasAppFolder: false,
   hasSharedFolder: false,
   hasInfrastructureFolder: false,

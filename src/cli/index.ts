@@ -1,11 +1,17 @@
 #!/usr/bin/env tsx
 import { program } from "commander"
-import { readFileSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { resolve, dirname } from "node:path"
+import { resolve, dirname, join } from "node:path"
 import { analyze } from "../core/analyzer.js"
 import { formatLevel, formatDiagnostics } from "./formatters/console.js"
+import {
+  generateRulesContent,
+  outputPathForTarget,
+  ALL_TARGETS,
+} from "./export-rules.js"
 import type { KaachanConfig } from "../types/config.js"
+import type { RulesTarget } from "./export-rules.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -60,6 +66,43 @@ program.action(async (pathArg: string, options: { level?: boolean; disableRule?:
 
   const hasErrors = result.value.diagnostics.some((d) => d.severity === "error")
   if (hasErrors) process.exit(1)
+})
+
+const exportRulesCommand = program
+  .command("export:rules")
+  .description("Generate AI rules files from the detected architecture level")
+  .argument("[path]", "Path to analyze (defaults to current directory)", ".")
+  .option("--target <target>", "Target format: claude | cursor | cline | gemini (default: all)")
+
+exportRulesCommand.action(async (pathArg: string, options: { target?: string }) => {
+  const rootDir = resolve(pathArg)
+
+  const config: KaachanConfig = {
+    ...DEFAULT_CONFIG,
+    rootDir,
+  }
+
+  const result = await analyze(config)
+
+  if (!result.ok) {
+    console.error(`Error: ${result.error}`)
+    process.exit(1)
+  }
+
+  const targets: readonly RulesTarget[] =
+    options.target != null
+      ? [options.target as RulesTarget]
+      : ALL_TARGETS
+
+  const content = generateRulesContent(result.value, config.thresholds)
+
+  for (const target of targets) {
+    const relativePath = outputPathForTarget(target)
+    const absolutePath = join(rootDir, relativePath)
+    mkdirSync(dirname(absolutePath), { recursive: true })
+    writeFileSync(absolutePath, content, "utf8")
+    console.log(`  wrote ${relativePath}`)
+  }
 })
 
 program.parse()
