@@ -59,6 +59,14 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
         .filter((f) => f.endsWith(".ts"))
         .map((f) => join(sourceRoot, FOLDER_NAMES.LOGIC, f))
     : []
+
+  const PARSE_FOLDER = "parse"
+  const hasParseFolder = dirs.includes(PARSE_FOLDER)
+  const parseFolderFiles = hasParseFolder
+    ? listEntries(join(sourceRoot, PARSE_FOLDER)).files
+        .filter((f) => f.endsWith(".ts"))
+        .map((f) => join(sourceRoot, PARSE_FOLDER, f))
+    : []
   const crossFolders = dirs.filter((d) => d.startsWith(FOLDER_PATTERNS.CROSS_PREFIX))
   const domainFolders = dirs
     .filter((d) => FOLDER_PATTERNS.DOMAIN.test(d))
@@ -75,7 +83,9 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
       hasRoute: files.includes(LAYER_FILES.ROUTE),
       hasWorkflow: files.includes(LAYER_FILES.WORKFLOW),
       hasMiddleware: files.includes(LAYER_FILES.MIDDLEWARE),
-      hasParse: files.includes(LAYER_FILES.PARSE),
+      hasParse: files.includes(LAYER_FILES.PARSE) || hasParseFolder,
+      hasParseFolder,
+      parseFolderFiles,
       hasRepository: files.includes(LAYER_FILES.REPOSITORY),
       hasClient: files.includes(LAYER_FILES.CLIENT),
       hasLogic: files.includes(LAYER_FILES.LOGIC) || hasLogicFolder,

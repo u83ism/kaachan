@@ -79,7 +79,7 @@ export const parseViolationsRule: Rule = {
   check(context: RuleContext): readonly Diagnostic[] {
     const diagnostics: Diagnostic[] = []
 
-    if (context.snapshot.hasParse) {
+    if (context.snapshot.hasParse && !context.snapshot.hasParseFolder) {
       const parseFilePath = join(context.snapshot.sourceRoot, "parse.ts")
       const parseFile =
         context.morphProject.getSourceFile(parseFilePath) ??

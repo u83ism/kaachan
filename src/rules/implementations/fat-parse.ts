@@ -6,6 +6,28 @@ import type { Rule, RuleContext } from "../../types/rule.js"
 
 const RULE_ID = "fat-parse"
 
+const checkParseFolder = (context: RuleContext): readonly Diagnostic[] => {
+  const { errorLogicFolderLines } = context.config.thresholds
+  const diagnostics: Diagnostic[] = []
+
+  for (const filePath of context.snapshot.parseFolderFiles) {
+    const metricsResult = measureFile(context.morphProject, filePath)
+    if (!metricsResult.ok) continue
+
+    if (metricsResult.value.lineCount > errorLogicFolderLines) {
+      diagnostics.push({
+        ruleId: RULE_ID,
+        severity: "error",
+        message: `${filePath} exceeds ${errorLogicFolderLines} lines (${metricsResult.value.lineCount} lines) — split further or restructure`,
+        location: { filePath },
+        suggestion: "Split into smaller parse files within parse/.",
+      })
+    }
+  }
+
+  return diagnostics
+}
+
 const buildDiagnostics = (
   filePath: string,
   lineCount: number,
@@ -45,6 +67,7 @@ export const fatParseRule: Rule = {
   activateFromLevel: 3,
   check(context: RuleContext): readonly Diagnostic[] {
     if (!context.snapshot.hasParse) return []
+    if (context.snapshot.hasParseFolder) return checkParseFolder(context)
 
     const filePath = join(context.snapshot.sourceRoot, "parse.ts")
     const result = measureFile(context.morphProject, filePath)

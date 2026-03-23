@@ -93,3 +93,41 @@ describe("fat-parse rule", () => {
     expect(parseDiags).toHaveLength(0)
   })
 })
+
+describe("fat-parse rule — parse/ folder mode", () => {
+  it("detects level as Lv3 when parse/ folder exists (no parse.ts)", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv3-parse-folder-bloat")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBe(3)
+  })
+
+  it("emits error when a parse/ folder file exceeds errorLogicFolderLines threshold", async () => {
+    const result = await analyze(
+      makeConfig(join(fixturesDir, "lv3-parse-folder-bloat"), { thresholds: lowThresholds }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    expect(parseDiags).toHaveLength(1)
+    expect(parseDiags[0]?.severity).toBe("error")
+    expect(parseDiags[0]?.message).toContain("exceeds")
+  })
+
+  it("emits no diagnostics when parse/ folder files are within threshold", async () => {
+    const highThresholds = { ...lowThresholds, errorLogicFolderLines: 999 }
+    const result = await analyze(
+      makeConfig(join(fixturesDir, "lv3-parse-folder-bloat"), { thresholds: highThresholds }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    expect(parseDiags).toHaveLength(0)
+  })
+
+  it("skips parse.ts check when in folder mode", async () => {
+    // parse/ folder fixture has no parse.ts — rule must not crash or produce spurious diagnostics
+    const result = await analyze(makeConfig(join(fixturesDir, "lv3-parse-folder-bloat")))
+    expect(result.ok).toBe(true)
+  })
+})
