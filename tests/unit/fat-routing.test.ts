@@ -104,6 +104,44 @@ describe("fat-routing rule — app/route.ts size", () => {
   })
 })
 
+describe("fat-routing rule — domain co-location (routes.ts)", () => {
+  it("emits hint for each domain missing routes.ts", async () => {
+    const result = await analyze(makeConfig(fatRoutingFixture))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const hints = result.value.diagnostics.filter(
+      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+    )
+    // both domainOrder and domainUser lack routes.ts
+    expect(hints.length).toBeGreaterThanOrEqual(2)
+    expect(hints.every((d) => d.severity === "hint")).toBe(true)
+  })
+
+  it("emits no co-location hint when all domains have routes.ts", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-domain-with-routes")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const hints = result.value.diagnostics.filter(
+      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+    )
+    expect(hints).toHaveLength(0)
+  })
+
+  it("emits no co-location hint for domain folders that have no workflow.ts", async () => {
+    // lv6 fixture has a domain folder (domainUser) with no workflow.ts
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const hints = result.value.diagnostics.filter(
+      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+    )
+    expect(hints).toHaveLength(0)
+  })
+})
+
 describe("fat-routing rule — activation", () => {
   it("does not activate at Lv5 (no app/ folder)", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5")))

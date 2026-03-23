@@ -127,6 +127,23 @@ export const fatRoutingRule: Rule = {
       }
     }
 
+    // Check 5: Domain co-location — domains with workflow.ts but missing routes.ts
+    for (const domain of context.snapshot.domainFolders) {
+      const workflowPath = join(domain.absolutePath, "workflow.ts")
+      if (!existsSync(workflowPath)) continue
+
+      const routesPath = join(domain.absolutePath, "routes.ts")
+      if (!existsSync(routesPath)) {
+        diagnostics.push({
+          ruleId: RULE_ID,
+          severity: "hint",
+          message: `${domain.name}/ is missing routes.ts — consider co-locating route definitions at Lv6+`,
+          location: { filePath: domain.absolutePath },
+          suggestion: "Create routes.ts in the domain folder and import it from app/route.ts.",
+        })
+      }
+    }
+
     return diagnostics
   },
 }
