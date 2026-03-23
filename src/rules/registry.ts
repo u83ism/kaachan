@@ -20,6 +20,7 @@ import { infrastructureBoundaryRule } from "./implementations/infrastructure-bou
 import { cqrsEnforcementRule } from "./implementations/cqrs-enforcement.js"
 import { routeInlineRule } from "./implementations/route-inline.js"
 import { workflowThrowsRule } from "./implementations/workflow-throws.js"
+import { slimeConfigHintRule } from "./implementations/slime-config-hint.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -42,6 +43,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   cqrsEnforcementRule,
   routeInlineRule,
   workflowThrowsRule,
+  slimeConfigHintRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
