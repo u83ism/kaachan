@@ -15,6 +15,7 @@ kaachan/
 ├── src/
 │   ├── cli/
 │   │   ├── index.ts                    # CLI entry point (commander)
+│   │   ├── export-rules.ts             # export:rules subcommand
 │   │   └── formatters/
 │   │       ├── console.ts              # human-readable output
 │   │       └── json.ts                 # machine-readable output
@@ -33,7 +34,9 @@ kaachan/
 │   │   └── implementations/
 │   │       ├── fat-logic.ts            # Fat Logic (lines + prefix + type graph)
 │   │       ├── fat-workflow.ts         # Fat Workflow (lines only)
-│   │       └── fat-parse.ts            # Fat Parse (lines only, sharing OK)
+│   │       ├── fat-parse.ts            # Fat Parse (lines + parse/ folder support, sharing OK)
+│   │       ├── workflow-throws.ts      # Workflow new Error() direct throw detection
+│   │       └── slime-config-hint.ts    # slime.config.ts absence hint (Lv5+)
 │   ├── analysis/
 │   │   ├── line-counter.ts             # ts-morph line/function counting
 │   │   ├── prefix-checker.ts           # domain prefix extraction + mixing detect
@@ -146,6 +149,7 @@ Line/function count only. No prefix or type-graph analysis.
 
 ### fat-parse (activates Lv3)
 Line/function count only. Shared schemas explicitly allowed — message reflects this.
+When `parse/` folder exists: each file exceeding `errorLogicFolderLines` (300) → error. Mirrors fat-logic's `checkLogicFolder` behaviour.
 
 ---
 
@@ -169,6 +173,10 @@ npx kaachan ./src         # analyze specific path
 npx kaachan --level       # show detected level + evidence only
 npx kaachan --format json # machine-readable output
 npx kaachan --disable-rule fat-workflow  # skip a specific rule
+
+npx kaachan export:rules                  # generate AI rules files (all formats)
+npx kaachan export:rules --target claude  # generate CLAUDE.md only
+npx kaachan export:rules --target cursor  # generate .cursor/rules only
 ```
 
 Exit code 0 = no errors. Exit code 1 = ≥1 error severity diagnostic.
@@ -429,7 +437,7 @@ New rule file: `src/rules/implementations/fat-routing.ts`. Active from Lv6.
 4. **Unreachable Workflow candidate** — `workflow.ts` files in domain folders that are not imported by any route file → hint
    - Detection: collect all route files' import specifiers; flag domain workflow.ts files not in the import closure
 
-- Note: `sunset` date detection (route with past expiry) is deferred — requires comment/annotation convention definition.
+- Note: `sunset` date detection is out of scope — requires Slime FW to support `{ sunset: '...' }` route attributes, which is not yet implemented.
 - Fixtures: `tests/fixtures/lv6-violations/fat-routing/`
 
 ---
@@ -545,31 +553,158 @@ Most complex phase — requires heuristic AST analysis. New rule file: `src/rule
 
 ---
 
+---
+
+### Phase 21 — Lv3 補完: `fat-parse` フォルダ対応
+
+Extends the existing `fat-parse` rule to handle the `parse/` folder — mirroring how `fat-logic` handles `logic/`.
+
+#### Changes to `src/rules/implementations/fat-parse.ts`
+
+- When `parse/` folder exists (detected via `ProjectSnapshot`), switch to folder-mode:
+  - Each file in `parse/` exceeding `errorLogicFolderLines` (300 lines) → **error**
+  - Message: `"parse/<file>.ts exceeds <N> lines — split further or restructure"`
+- When `parse.ts` exists (no folder): existing hint/warning behaviour unchanged
+- Scanner must expose `parseFolderFiles` (analogous to `logicFolderFiles`) and `hasParseFolder` on `ProjectSnapshot`
+
+- Fixtures: `tests/fixtures/lv3-violations/parse-folder-bloat/` — parse/ folder with an oversized file
+
+---
+
+### Phase 22 — Lv5 補完: `workflow-throws`
+
+New rule file: `src/rules/implementations/workflow-throws.ts`. Active from Lv5.
+
+Detects `throw new Error(...)` in `workflow.ts` files and suggests the Result pattern.
+
+This is distinct from `logic-throws` (which forbids **all** throws in Logic with **error** severity). Workflow **may** throw, but direct `new Error()` construction indicates the DomainError / TechnicalError split has not been adopted.
+
+#### Check
+
+- `workflow.ts` (root and inside domain folders): any `ThrowStatement` whose expression is `new Error(...)` → **warning**
+  - Detection: `getDescendantsOfKind(SyntaxKind.ThrowStatement)`; filter to those whose expression is a `NewExpression` with callee text `"Error"`
+  - Message: `"workflow.ts uses new Error() directly — define a DomainError string and return err(...) from Logic instead"`
+  - Suggestion: "Register the error in slime.config.ts and use Result err from Logic or Adapter."
+
+- Fixtures: `tests/fixtures/lv5-violations/workflow-new-error.ts`
+
+---
+
+### Phase 23 — Lv5 補完: `slime-config-hint`
+
+New rule file: `src/rules/implementations/slime-config-hint.ts`. Active from Lv5.
+
+At Lv5, Logic introduces DomainError strings. `slime.config.ts` is where those strings are mapped to HTTP status codes. If it does not exist, the mapping is absent.
+
+#### Check
+
+- Lv5+ and `slime.config.ts` does not exist in `rootDir` → **hint**
+  - Detection: `existsSync(join(context.snapshot.sourceRoot, "slime.config.ts"))`
+  - Message: `"slime.config.ts not found — create it to map DomainError strings to HTTP status codes"`
+  - Suggestion: "Add an errors map: `{ errors: { USER_ALREADY_EXISTS: 409, ... } }`"
+
+- Fixtures: `tests/fixtures/lv5-violations/no-slime-config/` — Lv5 structure without slime.config.ts
+
+---
+
+### Phase 24 — Lv6 補完: `fat-routing` ルート co-location チェック
+
+Extends the existing `fat-routing` rule with a co-location completeness check.
+
+At Lv6, route definitions are expected to move from `app/route.ts` into `domain/*/routes.ts`. Currently `fat-routing` detects that `app/route.ts` still contains URL literals, but does not detect domain folders that have `workflow.ts` but no `routes.ts`.
+
+#### Additional check in `src/rules/implementations/fat-routing.ts`
+
+- For each domain folder that has `workflow.ts` but lacks `routes.ts` → **hint**
+  - Detection: `existsSync(join(domain.absolutePath, "routes.ts"))` for domains that have `workflow.ts`
+  - Message: `"<domain>/workflow.ts exists but no routes.ts found — consider adding domain/*/routes.ts for co-location"`
+  - Suggestion: "Create routes.ts in the domain folder and import it from app/route.ts."
+
+- Fixtures: add `tests/fixtures/lv6-violations/fat-routing/domain-no-routes/`
+
+---
+
+### Phase 25 — `export:rules` CLI サブコマンド
+
+New CLI subcommand that generates AI rules files from the detected architecture level and Kaachan thresholds. This is the "rules file" feature described in `kaachan-design.md`.
+
+**Design principle**: Kaachan detects "what is happening". The rules file tells AI "what should be done". Thresholds in the rules file must match Kaachan's configured thresholds exactly.
+
+#### New file: `src/cli/export-rules.ts`
+
+Pure function that takes `AnalysisResult` + `KaachanConfig` and returns rules file content strings per target format. No side effects (I/O at CLI boundary only).
+
+```ts
+type RulesTarget = "claude" | "cursor" | "cline" | "gemini"
+
+const generateRulesContent = (
+  result: AnalysisResult,
+  config: KaachanConfig,
+  target: RulesTarget,
+): string
+```
+
+#### Output paths per target
+
+| Target | Output file |
+|---|---|
+| `claude` | `CLAUDE.md` |
+| `cursor` | `.cursor/rules/slime-architecture.md` |
+| `cline` | `.clinerules` |
+| `gemini` | `GEMINI.md` |
+
+Default (no `--target`): generate all formats.
+
+#### Content structure
+
+Each generated file includes:
+1. Current architecture level and its name
+2. Active constraints for the level (mirrors rules in `LEVEL_DEFINITIONS`)
+3. Kaachan hint thresholds (lines/functions) — must match `config.thresholds` exactly
+4. Domain split proposal instructions (when hint thresholds are exceeded)
+5. Next-level migration guidance (`requiredFilesForNext` / `requiredFoldersForNext` from `LEVEL_DEFINITIONS`)
+
+#### CLI wiring in `src/cli/index.ts`
+
+```bash
+kaachan export:rules                  # all targets, write to project root
+kaachan export:rules --target claude  # CLAUDE.md only
+kaachan export:rules [path]           # analyze path and write rules files there
+```
+
+- Exits 0 on success. Lists generated files.
+- Fixtures: not required (output is deterministic from level + config)
+
+---
+
 ## Rule Activation Summary (complete)
 
 | Rule ID | Active from | Phase |
 |---|---|---|
 | `fat-workflow` | Lv2 | Phase 4 ✅ |
-| `route-inline` | Lv2 | Phase 20 |
-| `fat-parse` | Lv3 | Phase 4 ✅ |
-| `parse-violations` | Lv3 | Phase 12 |
+| `route-inline` | Lv2 | Phase 20 ✅ |
+| `fat-parse` | Lv3 | Phase 4 ✅ (parse/ folder: Phase 21) |
+| `parse-violations` | Lv3 | Phase 12 ✅ |
 | `repo-naming` | Lv4 | Phase 7 ✅ |
-| `repo-orm-leak` | Lv4 | Phase 13 |
-| `workflow-transaction` | Lv4 | Phase 13 |
+| `repo-orm-leak` | Lv4 | Phase 13 ✅ |
+| `workflow-transaction` | Lv4 | Phase 13 ✅ |
 | `fat-logic` | Lv5 | Phase 4–6 ✅ |
 | `logic-imports` | Lv5 | Phase 8 ✅ |
-| `logic-throws` | Lv5 | Phase 11 |
-| `logic-tests` | Lv5 (warn) → Lv7 (error) | Phase 11 |
+| `logic-throws` | Lv5 | Phase 11 ✅ |
+| `logic-tests` | Lv5 (warn) → Lv7 (error) | Phase 11 ✅ |
+| `workflow-throws` | Lv5 | Phase 22 |
+| `slime-config-hint` | Lv5 | Phase 23 |
 | `dep-direction` | Lv6 | Phase 9 ✅ |
-| `app-layer` | Lv6 | Phase 14 |
-| `client-acl` | Lv6 | Phase 14 |
-| `fat-routing` | Lv6 | Phase 15 |
-| `app-structure` | Lv7 | Phase 16 |
-| `nested-domain` | Lv7 | Phase 16 |
-| `events-validation` | Lv8 | Phase 17 |
-| `cross-folder-concerns` | Lv8 | Phase 17 |
-| `infrastructure-boundary` | Lv9 | Phase 18 |
-| `cqrs-enforcement` | Lv10 | Phase 19 |
+| `app-layer` | Lv6 | Phase 14 ✅ |
+| `client-acl` | Lv6 | Phase 14 ✅ |
+| `fat-routing` | Lv6 | Phase 15 ✅ (co-location: Phase 24) |
+| `app-structure` | Lv7 | Phase 16 ✅ |
+| `nested-domain` | Lv7 | Phase 16 ✅ |
+| `events-validation` | Lv8 | Phase 17 ✅ |
+| `cross-folder-concerns` | Lv8 | Phase 17 ✅ |
+| `infrastructure-boundary` | Lv9 | Phase 18 ✅ |
+| `cqrs-enforcement` | Lv10 | Phase 19 ✅ |
+| `export:rules` CLI | — | Phase 25 |
 
 ---
 
