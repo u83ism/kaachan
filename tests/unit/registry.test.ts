@@ -6,19 +6,10 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phases 33 and 35). Remove an ID here when its rule is implemented */
+/** Catalog rules no module reports yet (Phase 33). Remove an ID here when its rule is implemented */
 const NOT_YET_IMPLEMENTED = [
   "domain-pair-coordinated",
   "domain-folder-thin",
-  "infrastructure-missing",
-  "domain-imports-infrastructure",
-  "ports-has-implementation",
-  "store-remains",
-  "cqrs-folders-missing",
-  "query-imports-write-port",
-  "query-writes",
-  "command-returns-view-model",
-  "query-multiple-per-file",
 ]
 
 const reportedIds = BUILT_IN_RULES.flatMap((r) => r.ruleIds)

@@ -115,9 +115,11 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `transactions` | `orchestrate-without-transaction`, `defer-suggestion` (opt-in) |
 | `cross-folder-concerns` | `orchestrate-non-transactional-io` |
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
+| `ports-adapters` | `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
+| `cqrs-sides` | `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file` |
 
-The remaining 11 catalog rules are not implemented yet (see Phases 33 and 35 in `docs/implementation-plan.md`).
+The remaining 2 catalog rules are not implemented yet (see Phase 33 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

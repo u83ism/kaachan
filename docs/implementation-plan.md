@@ -705,7 +705,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -838,12 +838,23 @@ Both are hints, and the catalog states them without numbers. Decide the threshol
 - `EXTERNAL_SERVICE_PACKAGES` moved to `src/analysis/layer-modules.ts`
 - New fixture `lv8-orchestrate/`
 
-### Phase 35 — Lv9–10 rules (9)
+### Phase 35 — Lv9–10 rules (9) ✅
 
-- Lv9: `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains`
-- Lv10: `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file`
+| Catalog rule | Module | How it is detected |
+|---|---|---|
+| `infrastructure-missing` | `ports-adapters` | No `infrastructure/` folder in the source root |
+| `domain-imports-infrastructure` | `ports-adapters` | A relative import in a file under `domains/<name>/` that resolves into `infrastructure/` |
+| `ports-has-implementation` | `ports-adapters` | A top-level statement in `ports.ts` (domain, `command/`, `query/`) other than a type alias, interface, import or re-export |
+| `store-remains` | `ports-adapters` | Any store file except `app/store.ts` (reported by `app-owns-store`), `shared/store.ts` included: the theory removes the word "store" from Lv9 on |
+| `cqrs-folders-missing` | `cqrs-sides` | A domain with a `workflow.ts` but without both `command/` and `query/`. Domains without a workflow (upstream domains with only `logic.ts` / `ports.ts`, like `domains/auth/` in the theory's Lv10 layout) are exempt |
+| `query-imports-write-port` | `cqrs-sides` | A `query/` file importing from the domain's `command/`, from a command adapter (`infrastructure/**/command*.ts`), or a name ending in `WritePort` |
+| `query-writes` | `cqrs-sides` | In a `query/` file, a table write (Phase 32 detection) or a call to a method starting with `create` / `save` / `update` / `delete` / `remove` / `insert` / `upsert` |
+| `command-returns-view-model` | `cqrs-sides` | An exported function in `command/workflow.ts` whose return type annotation (including the inner function of a port-injected `(port) => async (input) => ...` workflow) names a type ending in `View` / `ViewModel` / `ReadModel` / `Projection` |
+| `query-multiple-per-file` | `cqrs-sides` | A `query/` file other than `ports.ts` with more than one exported function |
 
-Detection note: Lv10 structure detection must expect one query per file under `query/` (`userList.ts`), not `query/workflow.ts`.
+- Level detection already expects one query per file: `hasQuery` only checks that `query/` exists, and `ports.ts` in `command/` / `query/` counts for Lv9 (Phase 26)
+- `infrastructure-missing` never fires on a detected level, like `events-file-missing`: Lv9 detection itself requires `infrastructure/`. Tested with the level fixed
+- New fixtures `lv9-ports/` and `lv10-sides/`
 
 Not in the catalog yet (proposals in the theory repository, do not implement until they land in `RULE_CATALOG`):
 

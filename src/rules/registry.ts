@@ -33,6 +33,8 @@ import { routeSunsetRule } from "./implementations/route-sunset.js"
 import { tableOwnershipRule } from "./implementations/table-ownership.js"
 import { orchestrateBoundaryRule } from "./implementations/orchestrate-boundary.js"
 import { transactionsRule } from "./implementations/transactions.js"
+import { portsAdaptersRule } from "./implementations/ports-adapters.js"
+import { cqrsSidesRule } from "./implementations/cqrs-sides.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -67,6 +69,8 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   tableOwnershipRule,
   orchestrateBoundaryRule,
   transactionsRule,
+  portsAdaptersRule,
+  cqrsSidesRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [
