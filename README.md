@@ -85,13 +85,18 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 |---|---|
 | `fat-workflow` | `workflow-size-hint`, `workflow-size-warning` |
 | `route-inline` | `route-handler-non-http`, `workflow-auth-import` |
+| `route-namespace` | `route-api-namespace` |
 | `fat-parse` | `parse-size-hint`, `parse-size-warning`, `parse-folder-file-too-large` |
 | `parse-violations` | `parse-db-import`, `workflow-raw-parse` |
+| `workflow-http` | `workflow-http-access`, `workflow-calls-parse` |
 | `slime-config-hint` | `slime-config-missing` |
-| `workflow-throws` | `workflow-throws-plain-error` |
+| `workflow-throws` | `workflow-throws-plain-error`, `workflow-throws-domain-error` |
 | `repo-naming` | `store-naming`, `workflow-orm-import` |
-| `repo-advanced` | `store-orm-return-type`, `workflow-orm-transaction` |
+| `repo-advanced` | `store-orm-return-type`, `store-orm-param`, `workflow-orm-transaction` |
+| `store-filter` | `store-generic-filter` |
+| `store-in-loop` | `store-call-in-loop` |
 | `fat-logic` | `logic-size-hint`, `logic-size-warning`, `logic-folder-file-too-large` |
+| `logic-prefix` | `logic-missing-prefix` |
 | `logic-imports` | `logic-store-client-import` |
 | `logic-throws` | `logic-throws` |
 | `logic-tests` | `logic-test-missing` |
@@ -104,7 +109,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
 
-The remaining 37 catalog rules are not implemented yet (see Phases 30–35 in `docs/implementation-plan.md`).
+The remaining 29 catalog rules are not implemented yet (see Phases 31–35 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

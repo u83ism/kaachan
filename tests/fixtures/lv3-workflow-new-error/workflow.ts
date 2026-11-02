@@ -11,3 +11,12 @@ export const deleteUserWorkflow = async (id: string) => {
     throw new Error("ID_REQUIRED")
   }
 }
+
+class DomainError extends Error {}
+
+// Good at Lv3: a business rejection as a typed DomainError
+export const renameUserWorkflow = async (name: string) => {
+  if (name === "admin") {
+    throw new DomainError("USER_NAME_RESERVED")
+  }
+}

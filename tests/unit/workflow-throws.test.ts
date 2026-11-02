@@ -68,6 +68,24 @@ describe("workflow-throws rule", () => {
     expect(diags).toHaveLength(0)
   })
 
+  it("hints at a workflow throwing DomainError from Lv5", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv5-domain-error")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBe(5)
+    const diags = result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws-domain-error")
+    expect(diags).toHaveLength(1)
+    expect(diags[0]?.severity).toBe("hint")
+    expect(diags[0]?.message).toContain("err()")
+  })
+
+  it("does not report DomainError throws in Lv3–4, where they are the recommended form", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv3-workflow-new-error")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws-domain-error")).toHaveLength(0)
+  })
+
   it("can be disabled via disabledRules", async () => {
     const result = await analyze(
       makeConfig(join(fixturesDir, "lv5-workflow-new-error"), {

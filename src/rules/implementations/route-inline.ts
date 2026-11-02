@@ -1,6 +1,6 @@
 import { Node, SyntaxKind } from "ts-morph"
-import type { ImportDeclaration, SourceFile } from "ts-morph"
-import { isOrmImport, loadSourceFile } from "../../analysis/layer-modules.js"
+import type { SourceFile } from "ts-morph"
+import { isOrmImport, isRelativeLayerImport, loadSourceFile, namesImportedFrom, usedIdentifiers } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -37,36 +37,14 @@ const isAuthPackage = (specifier: string): boolean =>
 const NON_HTTP_LAYER_MODULES: readonly string[] = ["store", "logic"]
 
 const isNonHttpModule = (specifier: string): boolean =>
-  isOrmImport(specifier) ||
-  (specifier.startsWith(".") &&
-    specifier.replace(/\.(js|ts)$/, "").split("/").some((s) => NON_HTTP_LAYER_MODULES.includes(s)))
-
-const importedNames = (decl: ImportDeclaration): readonly string[] => [
-  ...decl.getNamedImports().map((n) => n.getAliasNode()?.getText() ?? n.getName()),
-  ...[decl.getDefaultImport(), decl.getNamespaceImport()].flatMap((n) => (n ? [n.getText()] : [])),
-]
-
-/** Identifier uses, excluding property names (`res.json` does not use a variable named `json`) */
-const usedIdentifiers = (node: Node): readonly string[] =>
-  node
-    .getDescendantsOfKind(SyntaxKind.Identifier)
-    .filter((id) => {
-      const parent = id.getParent()
-      return !(Node.isPropertyAccessExpression(parent) && parent.getNameNode() === id)
-    })
-    .map((id) => id.getText())
+  isOrmImport(specifier) || NON_HTTP_LAYER_MODULES.some((layer) => isRelativeLayerImport(specifier, layer))
 
 /**
  * Names in route.ts that reach store, logic or the database: names imported from those
  * modules, plus top-level variables initialized from them (`const prisma = new PrismaClient()`).
  */
 const nonHttpNames = (sourceFile: SourceFile): ReadonlySet<string> => {
-  const imported = new Set(
-    sourceFile
-      .getImportDeclarations()
-      .filter((d) => isNonHttpModule(d.getModuleSpecifierValue()))
-      .flatMap(importedNames),
-  )
+  const imported = namesImportedFrom(sourceFile, isNonHttpModule)
   const derived = sourceFile
     .getVariableDeclarations()
     .filter((v) => {

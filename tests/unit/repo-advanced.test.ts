@@ -115,3 +115,25 @@ describe("repo-advanced rule — workflow $transaction direct call", () => {
     expect(diagnostics).toHaveLength(0)
   })
 })
+
+describe("repo-advanced rule — ORM types as store parameters", () => {
+  it("warns when a store function takes an ORM where input", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv4-store-queries")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const params = result.value.diagnostics.filter((d) => d.ruleId === "store-orm-param")
+    expect(params).toHaveLength(1)
+    expect(params[0]?.severity).toBe("warning")
+    expect(params[0]?.message).toContain('listUsersWhere() takes an ORM type as parameter "where" (Prisma)')
+  })
+
+  it("does not flag parameters typed with the store's own types", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv4-store-queries")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const params = result.value.diagnostics.filter((d) => d.ruleId === "store-orm-param")
+    expect(params.some((d) => d.message.includes("listUsers()"))).toBe(false)
+  })
+})

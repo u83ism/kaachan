@@ -21,6 +21,11 @@ import { cqrsEnforcementRule } from "./implementations/cqrs-enforcement.js"
 import { routeInlineRule } from "./implementations/route-inline.js"
 import { workflowThrowsRule } from "./implementations/workflow-throws.js"
 import { slimeConfigHintRule } from "./implementations/slime-config-hint.js"
+import { routeNamespaceRule } from "./implementations/route-namespace.js"
+import { workflowHttpRule } from "./implementations/workflow-http.js"
+import { storeFilterRule } from "./implementations/store-filter.js"
+import { storeInLoopRule } from "./implementations/store-in-loop.js"
+import { logicPrefixRule } from "./implementations/logic-prefix.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -43,6 +48,11 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   routeInlineRule,
   workflowThrowsRule,
   slimeConfigHintRule,
+  routeNamespaceRule,
+  workflowHttpRule,
+  storeFilterRule,
+  storeInLoopRule,
+  logicPrefixRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

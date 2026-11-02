@@ -704,7 +704,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -759,17 +759,27 @@ Since Phase 27 the severities and active levels already follow the catalog (e.g.
 
 The 37 catalog rules not implemented yet are split into Phases 30–35, grouped by level and by what the detection needs. Implement in this order. Severities come from the catalog (Phase 27), and every rule on layer files reads `snapshot.layerFiles` (Phase 28). When a rule is implemented, remove its ID from `NOT_YET_IMPLEMENTED` in `tests/unit/registry.test.ts`.
 
-### Phase 30 — Lv2–5 rules (8)
+### Phase 30 — Lv2–5 rules (8) ✅
 
 - Route and workflow: `route-api-namespace`, `workflow-http-access`, `workflow-calls-parse`, `workflow-throws-domain-error`
 - Store: `store-orm-param`, `store-generic-filter`, `store-call-in-loop`
 - Logic: `logic-missing-prefix`
 
-Detection notes:
+Detection:
 
-- `store-orm-param` — the same ORM type detection as `store-orm-return-type`, applied to parameter types (ORM `where` input types, query builders)
-- `store-generic-filter` — flag filter/query types whose field-name or operator properties are typed as `string` instead of a union of literals
-- `store-call-in-loop` — a call to a store function inside `for` / `for...of` / `while` or a callback passed to `forEach` / `map` / etc. Hint only: the loop count is unknown statically, and actual N+1 detection belongs to Slime FW runtime metrics
+| Catalog rule | Module | How it is detected |
+|---|---|---|
+| `route-api-namespace` | `route-namespace` | A route definition in a `route.ts` (`x.get("/path", handler)` etc.) whose path does not start with `/api`, outside a call that opens an `/api` group (`group({ prefix: "/api" }, ...)`, `route("/api", ...)`, `basePath("/api")` in the receiver chain). Infrastructure paths (`/health`, `/healthz`, `/ready`, `/live`, `/ping`, `/metrics`, `/webhooks` and their subpaths) are allowed. Domain `routes.ts` files are written without a prefix and are not checked |
+| `workflow-http-access` | `workflow-http` | A workflow imports an HTTP framework (`express`, `hono`, `fastify`, `koa`, `next/server`, …), or an exported workflow function has a parameter typed `Request` / `Response` / `Context` / `NextFunction` / `FastifyRequest` etc. |
+| `workflow-calls-parse` | `workflow-http` | A workflow calls a name imported from a parse module (`./parse.js`, `./parse/user.js`). Type-only use of parse types is fine |
+| `workflow-throws-domain-error` | `workflow-throws` | `throw new DomainError(...)` in a workflow. The catalog activates it from Lv5, so the recommended Lv3–4 form is never reported |
+| `store-orm-param` | `repo-advanced` | A parameter type of an exported store function refers to a name imported from an ORM package (`Prisma.UserWhereInput`, `Knex.QueryBuilder`). Names are matched as whole identifiers, now also for `store-orm-return-type` |
+| `store-generic-filter` | `store-filter` | In a store file, a property named `field` / `column` / `op` / `operator` / `orderBy` / `sortBy` / … typed `string` (or `string[]`, or a union containing it); or a read function (`find*` / `list*` / `get*` / `count*` / `search*`) taking `Record<string, …>` or a `[key: string]` index signature |
+| `store-call-in-loop` | `store-in-loop` | In a workflow, a call to a name imported from a store module inside a loop body (`for` / `for...of` / `for...in` / `while` / `do`) or a callback passed to `forEach` / `map` / `flatMap` / `filter` / `reduce` / `some` / `every` / `find` / `findIndex`. The iterated expression (`for (const u of await listUsers())`) runs once and is not flagged |
+| `logic-missing-prefix` | `logic-prefix` | An exported logic function whose leading word states a judgment without a domain: `can`, `is`, `has`, `should`, `must`, `may`, `check`, `validate`, `verify`, `ensure`, `assert`, `allow` (`canEdit`, `isAdult`). Domain-first judgments (`userCanEdit`) and domain calculations (`calcOrderTotal`, `formatInvoiceNumber`) pass. Test files are skipped |
+
+- Shared helpers moved to `src/analysis/layer-modules.ts`: `importedNames`, `namesImportedFrom`, `usedIdentifiers`, `isRelativeLayerImport`, `exportedFunctions`
+- New fixtures `lv4-store-queries/` and `lv5-domain-error/`; `lv3-workflow-new-error/` gained a `DomainError` throw (not reported at Lv3)
 
 ### Phase 31 — Lv6 structure and the domain DAG (7)
 

@@ -1,11 +1,12 @@
-import { SyntaxKind } from "ts-morph"
-import type { FunctionDeclaration, SourceFile, VariableDeclaration } from "ts-morph"
+import { Node, SyntaxKind } from "ts-morph"
+import type { FunctionDeclaration, ParameterDeclaration, SourceFile, VariableDeclaration } from "ts-morph"
 import { isOrmImport, loadSourceFile } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
 const RULE_IDS = [
   "store-orm-return-type",
+  "store-orm-param",
   "workflow-orm-transaction",
 ] as const
 type Id = (typeof RULE_IDS)[number]
@@ -64,6 +65,18 @@ const getReturnTypeText = (fn: ExportedFn): string | undefined => {
   return undefined
 }
 
+/** ORM names a type annotation refers to (whole identifiers only: `Prisma` does not match `PrismaUser`) */
+const referencedOrmNames = (typeText: string, ormNames: ReadonlySet<string>): readonly string[] => {
+  const identifiers = new Set(typeText.match(/[A-Za-z_$][\w$]*/g) ?? [])
+  return [...ormNames].filter((name) => identifiers.has(name))
+}
+
+const getParameters = (fn: ExportedFn): readonly ParameterDeclaration[] => {
+  if (Node.isFunctionDeclaration(fn)) return fn.getParameters()
+  const init = fn.getInitializer()
+  return Node.isArrowFunction(init) || Node.isFunctionExpression(init) ? init.getParameters() : []
+}
+
 // --- Check 1: ORM type leaking through store.ts return types ---
 
 const checkRepoOrmLeak = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
@@ -76,7 +89,7 @@ const checkRepoOrmLeak = (sourceFile: SourceFile, filePath: string): readonly Fi
     const returnTypeText = getReturnTypeText(fn)
     if (!returnTypeText) continue
 
-    const leakedTypes = [...ormNames].filter((name) => returnTypeText.includes(name))
+    const leakedTypes = referencedOrmNames(returnTypeText, ormNames)
     if (leakedTypes.length === 0) continue
 
     diagnostics.push({
@@ -91,7 +104,30 @@ const checkRepoOrmLeak = (sourceFile: SourceFile, filePath: string): readonly Fi
   return diagnostics
 }
 
-// --- Check 2: workflow.ts calling ORM transaction API directly ---
+// --- Check 2: ORM types or query builders taken as store.ts parameters ---
+
+const checkStoreOrmParams = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
+  const ormNames = getOrmImportedNames(sourceFile)
+  if (ormNames.size === 0) return []
+
+  return getExportedFunctions(sourceFile).flatMap((fn) =>
+    getParameters(fn).flatMap((param) => {
+      const leaked = referencedOrmNames(param.getTypeNode()?.getText() ?? "", ormNames)
+      if (leaked.length === 0) return []
+      return [
+        {
+          ruleId: "store-orm-param" as const,
+          message: `store.ts: ${fn.getName() ?? "(anonymous)"}() takes an ORM type as parameter "${param.getName()}" (${leaked.join(", ")}) — callers could build queries outside the store`,
+          location: { filePath, line: fn.getStartLineNumber() },
+          suggestion:
+            "Take a filter type the store defines (e.g. UserFilter with literal unions) and build the ORM query inside the store.",
+        },
+      ]
+    }),
+  )
+}
+
+// --- Check 3: workflow.ts calling ORM transaction API directly ---
 
 const checkWorkflowTransaction = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const transactionCalls = sourceFile
@@ -119,6 +155,9 @@ export const repoAdvancedRule: Rule<Id> = {
     return [
       ...snapshot.layerFiles.store.flatMap((filePath) =>
         checkRepoOrmLeak(loadSourceFile(morphProject, filePath), filePath),
+      ),
+      ...snapshot.layerFiles.store.flatMap((filePath) =>
+        checkStoreOrmParams(loadSourceFile(morphProject, filePath), filePath),
       ),
       ...snapshot.layerFiles.workflow.flatMap((filePath) =>
         checkWorkflowTransaction(loadSourceFile(morphProject, filePath), filePath),

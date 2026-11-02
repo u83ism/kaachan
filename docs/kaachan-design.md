@@ -12,7 +12,7 @@ The greatest risk of the Logic layer is **unbounded growth before domain splitti
 
 ### 1. Domain Prefix Naming Enforcement
 
-Logic functions **must have a domain-indicating prefix**: `userCan*`, `orderCan*`, `paymentCan*`, etc. This is the same idea as requiring `find*`/`create*` for Store functions at Lv4. Simply naming functions this way creates a "draft" of domain boundaries. Kaachan detects violations via static analysis.
+Logic functions **must have a domain-indicating prefix**: `userCan*`, `orderCan*`, `paymentCan*`, etc. This is the same idea as requiring `find*`/`create*` for Store functions at Lv4. Simply naming functions this way creates a "draft" of domain boundaries. Kaachan detects violations via static analysis (`logic-missing-prefix`): a function whose leading word states a judgment without a domain (`canEdit`, `isAdult`, `validateOrder`) is reported. Domain calculations that name the domain right after the verb (`calcOrderTotal`, `formatInvoiceNumber`) pass.
 
 ### 2. Intermediate Promotion to `logic/` Folder
 

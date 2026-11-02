@@ -6,16 +6,8 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phases 30–35). Remove an ID here when its rule is implemented */
+/** Catalog rules no module reports yet (Phases 31–35). Remove an ID here when its rule is implemented */
 const NOT_YET_IMPLEMENTED = [
-  "route-api-namespace",
-  "workflow-http-access",
-  "workflow-calls-parse",
-  "store-orm-param",
-  "store-generic-filter",
-  "store-call-in-loop",
-  "logic-missing-prefix",
-  "workflow-throws-domain-error",
   "folder-name-not-kebab-case",
   "domain-dependency-cycle",
   "table-foreign-write",
