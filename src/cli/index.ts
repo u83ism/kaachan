@@ -5,14 +5,9 @@ import { fileURLToPath } from "node:url"
 import { resolve, dirname, join } from "node:path"
 import { analyze } from "../core/analyzer.js"
 import { formatLevel, formatDiagnostics } from "./formatters/console.js"
-import {
-  generateRulesContent,
-  outputPathForTarget,
-  ALL_TARGETS,
-} from "./export-rules.js"
+import { TARGET_IDS, loadRulesTemplate, renderRulesFile, selectTargets } from "./export-rules.js"
 import { isLevelDetected } from "../types/config.js"
 import type { KaachanConfig } from "../types/config.js"
-import type { RulesTarget } from "./export-rules.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -78,10 +73,16 @@ const exportRulesCommand = program
   .command("export:rules")
   .description("Generate AI rules files from the detected architecture level")
   .argument("[path]", "Path to analyze (defaults to current directory)", ".")
-  .option("--target <target>", "Target format: claude | cursor | cline | gemini (default: all)")
+  .option("--target <target>", `Target tool: ${TARGET_IDS.join(" | ")} (default: all)`)
 
 exportRulesCommand.action(async (pathArg: string, options: { target?: string }) => {
   const rootDir = resolve(pathArg)
+
+  const targets = selectTargets(options.target)
+  if (!targets.ok) {
+    console.error(`Error: ${targets.error}`)
+    process.exit(1)
+  }
 
   const config: KaachanConfig = {
     ...DEFAULT_CONFIG,
@@ -100,19 +101,18 @@ exportRulesCommand.action(async (pathArg: string, options: { target?: string }) 
     process.exit(1)
   }
 
-  const targets: readonly RulesTarget[] =
-    options.target != null
-      ? [options.target as RulesTarget]
-      : ALL_TARGETS
+  const template = loadRulesTemplate(result.value.level)
+  if (!template.ok) {
+    console.error(`Error: ${template.error}`)
+    process.exit(1)
+  }
 
-  const content = generateRulesContent(result.value, config.thresholds)
-
-  for (const target of targets) {
-    const relativePath = outputPathForTarget(target)
-    const absolutePath = join(rootDir, relativePath)
+  console.log(`Lv${result.value.level} rules:`)
+  for (const target of targets.value) {
+    const absolutePath = join(rootDir, target.destPath)
     mkdirSync(dirname(absolutePath), { recursive: true })
-    writeFileSync(absolutePath, content, "utf8")
-    console.log(`  wrote ${relativePath}`)
+    writeFileSync(absolutePath, renderRulesFile(template.value, target), "utf8")
+    console.log(`  wrote ${target.destPath}`)
   }
 })
 

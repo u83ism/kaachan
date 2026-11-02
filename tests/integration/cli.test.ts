@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { spawnSync } from "node:child_process"
-import { resolve, dirname } from "node:path"
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { resolve, dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -131,6 +133,41 @@ describe("CLI — --enable-rule flag", () => {
     const fixture = resolve(FIXTURES_DIR, "lv8-orchestrate")
     expect(runCli([fixture]).stdout).not.toContain("[defer-suggestion]")
     expect(runCli([fixture, "--enable-rule", "defer-suggestion"]).stdout).toContain("[defer-suggestion]")
+  })
+})
+
+describe("CLI — export:rules", () => {
+  const copyFixture = (name: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), "kaachan-export-"))
+    cpSync(resolve(FIXTURES_DIR, name), dir, { recursive: true })
+    return dir
+  }
+
+  it("writes the shared Lv5 template for every target", () => {
+    const dir = copyFixture("lv5-with-test")
+    try {
+      const { stdout, exitCode } = runCli(["export:rules", dir])
+      expect(exitCode).toBe(0)
+      expect(stdout).toContain("wrote AGENTS.md")
+      const claude = readFileSync(join(dir, "CLAUDE.md"), "utf8")
+      expect(claude).toContain("# Slime Architecture Rules — Level 5 (Logic Layer)")
+      expect(readFileSync(join(dir, ".cursor/rules/slime.mdc"), "utf8")).toMatch(/^---\n/)
+      expect(existsSync(join(dir, ".gemini/styleguide.md"))).toBe(true)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects an unknown --target and writes nothing", () => {
+    const dir = copyFixture("lv5-with-test")
+    try {
+      const { stderr, exitCode } = runCli(["export:rules", dir, "--target", "cline"])
+      expect(exitCode).toBe(1)
+      expect(stderr).toContain('Unknown target "cline"')
+      expect(existsSync(join(dir, "CLAUDE.md"))).toBe(false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

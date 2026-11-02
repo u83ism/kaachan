@@ -42,7 +42,12 @@ npx kaachan ./src         # analyze specific path
 npx kaachan --level       # show detected architecture level and evidence only
 npx kaachan --disable-rule parse-db-import  # skip a catalog rule (or a whole module, e.g. fat-workflow)
 npx kaachan --enable-rule defer-suggestion  # report an opt-in rule (off by default)
+
+npx kaachan export:rules                  # write the AI rules files of the detected level (CLAUDE.md, AGENTS.md, .gemini/styleguide.md, .cursor/rules/slime.mdc)
+npx kaachan export:rules --target codex   # one target: claude | codex | gemini | cursor
 ```
+
+`export:rules` writes the shared rules template of the detected level (`@u83ism/architecture-rules/rules/lv*.md`) and overwrites existing files.
 
 ### Exit Codes
 

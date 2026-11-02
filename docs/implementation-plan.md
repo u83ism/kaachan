@@ -186,7 +186,7 @@ npx kaachan --enable-rule defer-suggestion  # report an opt-in rule
 
 npx kaachan export:rules                  # generate AI rules files (all formats)
 npx kaachan export:rules --target claude  # generate CLAUDE.md only
-npx kaachan export:rules --target cursor  # generate .cursor/rules only
+npx kaachan export:rules --target cursor  # generate .cursor/rules/slime.mdc only (targets: claude, codex, gemini, cursor)
 ```
 
 Exit code 0 = no errors. Exit code 1 = ≥1 error severity diagnostic.
@@ -638,6 +638,8 @@ At Lv6, route definitions are expected to move from `app/route.ts` into `domain/
 
 ### Phase 25 — `export:rules` CLI サブコマンド
 
+> Superseded by Phase 36: the content now comes from the shared templates and the targets from `RULES_TARGETS`. The section below records the original design.
+
 New CLI subcommand that generates AI rules files from the detected architecture level and Kaachan thresholds. This is the "rules file" feature described in `kaachan-design.md`.
 
 **Design principle**: Kaachan detects "what is happening". The rules file tells AI "what should be done". Thresholds in the rules file must match Kaachan's configured thresholds exactly.
@@ -705,7 +707,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced).
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -860,12 +862,13 @@ Not in the catalog yet (proposals in the theory repository, do not implement unt
 
 - Capability-gated rules (`requires: Capability[]` on `RuleDefinition`, capabilities detected from code): `queue-*`, `defer-enqueue`, `outbox-outside-transaction` (「非同期・キュー導入 設計方針」) and `job-*` (「Slime FW詳細設計」 — job management)
 
-### Phase 36 — `export:rules` from the shared templates
+### Phase 36 — `export:rules` from the shared templates ✅
 
-- Replace the hard-coded `LEVEL_CONSTRAINTS` in `src/cli/export-rules.ts` with the shared templates (`rulesTemplateSpecifier`, `renderRulesForTarget`, `RULES_TARGETS`), so generated rules files carry the same guidance as `rules/_content/lv*.md`
-- Reconcile the target list: Kaachan has `claude` / `cursor` / `cline` / `gemini`; the shared package has `claude` / `codex` / `gemini` / `cursor`
-- Validate `--target` against the target IDs and exit with an error for unknown values (it is currently cast to the type unchecked)
-- Existing files at the destination are overwritten as a whole, as today (decided 2026-11-02; no marker-based partial replacement)
+- The hard-coded `LEVEL_CONSTRAINTS` are gone. `export:rules` reads the template of the detected level (`rulesTemplateSpecifier(level)`, resolved through the package's `./rules/*` export with `createRequire`) and writes `renderRulesForTarget(template, target)` for each target, so the files match `rules/<target>/` of the shared package
+- Targets follow `RULES_TARGETS`: `claude` (`CLAUDE.md`), `codex` (`AGENTS.md`), `gemini` (`.gemini/styleguide.md`), `cursor` (`.cursor/rules/slime.mdc`, with frontmatter). Kaachan's own `cline` target is dropped; `gemini` and `cursor` moved to the shared destinations
+- `--target` is validated before the analysis; an unknown value prints the valid IDs and exits 1 without writing anything
+- Existing files at the destination are overwritten as a whole, as before (decided 2026-11-02; no marker-based partial replacement)
+- `src/cli/export-rules.ts`: `selectTargets` and `renderRulesFile` are pure; `loadRulesTemplate` reads the file and returns a `Result`. The generated content no longer depends on `config.thresholds` (see "Threshold Synchronization" in `kaachan-design.md`)
 
 ### Phase 37 — Docs sync ✅
 

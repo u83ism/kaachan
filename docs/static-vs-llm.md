@@ -117,10 +117,10 @@ Whether `email: string` is an "unresolved reference that will tempt the develope
 
 ## The Bridge: `kaachan export:rules`
 
-The `export:rules` command generates AI rules files (CLAUDE.md, `.cursor/rules`, etc.) that:
+The `export:rules` command writes the shared rules template of the detected level (`@u83ism/architecture-rules/rules/lv*.md`) as AI rules files (`CLAUDE.md`, `AGENTS.md`, `.gemini/styleguide.md`, `.cursor/rules/slime.mdc`). The templates:
 
 1. State the current architecture level and active constraints
-2. **Mirror Kaachan's hint thresholds exactly** — so AI suggestions and Kaachan warnings fire at the same values
+2. **State the same thresholds Kaachan uses** — so AI suggestions and Kaachan warnings fire at the same values (the shared templates use Kaachan's defaults)
 3. Provide instructions for the LLM tasks above, scoped to the detected level
 
 This ensures a consistent signal: when Kaachan issues a hint, the AI continues to reinforce the same message, rather than the two tools giving contradictory guidance.

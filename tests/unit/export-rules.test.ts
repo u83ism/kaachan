@@ -1,106 +1,55 @@
 import { describe, it, expect } from "vitest"
-import { generateRulesContent, outputPathForTarget, ALL_TARGETS } from "../../src/cli/export-rules.js"
-import type { DetectedAnalysisResult } from "../../src/types/config.js"
-import type { FatThresholds } from "../../src/types/config.js"
+import { RULES_TARGETS } from "@u83ism/architecture-rules"
+import { TARGET_IDS, loadRulesTemplate, renderRulesFile, selectTargets } from "../../src/cli/export-rules.js"
 
-const defaultThresholds: FatThresholds = {
-  hintLines: 300,
-  hintFunctions: 10,
-  warningLines: 500,
-  errorLogicFolderLines: 300,
-}
-
-const makeResult = (overrides?: Partial<DetectedAnalysisResult>): DetectedAnalysisResult => ({
-  level: 5,
-  levelEvidence: ["logic.ts"],
-  missingForNext: ["app/ folder", "shared/ folder"],
-  diagnostics: [],
-  ...overrides,
-})
-
-describe("generateRulesContent", () => {
-  it("includes the architecture level in the output", () => {
-    const content = generateRulesContent(makeResult(), defaultThresholds)
-    expect(content).toContain("Lv5")
-    expect(content).toContain("Logic Layer")
+describe("selectTargets", () => {
+  it("selects every target of the shared package when no target is given", () => {
+    const result = selectTargets(undefined)
+    expect(result.ok && result.value.map((t) => t.id)).toEqual(["claude", "codex", "gemini", "cursor"])
   })
 
-  it("includes active constraints for the level", () => {
-    const content = generateRulesContent(makeResult(), defaultThresholds)
-    expect(content).toContain("domain prefix")
-    expect(content).toContain("Result type")
+  it("selects the named target", () => {
+    const result = selectTargets("cursor")
+    expect(result.ok && result.value.map((t) => t.destPath)).toEqual([".cursor/rules/slime.mdc"])
   })
 
-  it("mirrors hint threshold exactly from config", () => {
-    const customThresholds = { ...defaultThresholds, hintLines: 250, hintFunctions: 8 }
-    const content = generateRulesContent(makeResult(), customThresholds)
-    expect(content).toContain("250 lines")
-    expect(content).toContain("8 functions")
+  it("rejects an unknown target and lists the valid ones", () => {
+    const result = selectTargets("cline")
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.error).toBe('Unknown target "cline" — expected one of: claude, codex, gemini, cursor')
   })
 
-  it("mirrors warning threshold exactly from config", () => {
-    const customThresholds = { ...defaultThresholds, warningLines: 600 }
-    const content = generateRulesContent(makeResult(), customThresholds)
-    expect(content).toContain("600 lines")
-  })
-
-  it("includes next level migration guidance", () => {
-    const content = generateRulesContent(makeResult(), defaultThresholds)
-    expect(content).toContain("Lv6")
-    expect(content).toContain("app/ folder")
-  })
-
-  it("shows max level message when at Lv10", () => {
-    const result = makeResult({ level: 10, missingForNext: [] })
-    const content = generateRulesContent(result, defaultThresholds)
-    expect(content).toContain("maximum architecture level")
-  })
-
-  it("includes level-specific constraints for Lv6", () => {
-    const result = makeResult({ level: 6, levelEvidence: ["app/", "shared/", "domain folder"] })
-    const content = generateRulesContent(result, defaultThresholds)
-    expect(content).toContain("domains/<name>/")
-    expect(content).toContain("routes.ts")
-  })
-
-  it("includes AI guidance section", () => {
-    const content = generateRulesContent(makeResult(), defaultThresholds)
-    expect(content).toContain("AI Guidance")
-  })
-
-  it("includes level evidence in output", () => {
-    const result = makeResult({ levelEvidence: ["logic.ts", "parse.ts"] })
-    const content = generateRulesContent(result, defaultThresholds)
-    expect(content).toContain("logic.ts")
-    expect(content).toContain("parse.ts")
+  it("exposes the target IDs for the CLI help", () => {
+    expect(TARGET_IDS).toEqual(RULES_TARGETS.map((t) => t.id))
   })
 })
 
-describe("outputPathForTarget", () => {
-  it("returns CLAUDE.md for claude target", () => {
-    expect(outputPathForTarget("claude")).toBe("CLAUDE.md")
+describe("loadRulesTemplate", () => {
+  it("reads the shared template of the level", () => {
+    const result = loadRulesTemplate(5)
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.value).toContain("# Slime Architecture Rules — Level 5 (Logic Layer)")
   })
 
-  it("returns .cursor/rules path for cursor target", () => {
-    expect(outputPathForTarget("cursor")).toContain(".cursor")
-    expect(outputPathForTarget("cursor")).toContain("slime-architecture.md")
-  })
-
-  it("returns .clinerules for cline target", () => {
-    expect(outputPathForTarget("cline")).toBe(".clinerules")
-  })
-
-  it("returns GEMINI.md for gemini target", () => {
-    expect(outputPathForTarget("gemini")).toBe("GEMINI.md")
+  it("reads a template for every level", () => {
+    const levels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
+    expect(levels.filter((level) => !loadRulesTemplate(level).ok)).toEqual([])
   })
 })
 
-describe("ALL_TARGETS", () => {
-  it("includes all four target formats", () => {
-    expect(ALL_TARGETS).toContain("claude")
-    expect(ALL_TARGETS).toContain("cursor")
-    expect(ALL_TARGETS).toContain("cline")
-    expect(ALL_TARGETS).toContain("gemini")
-    expect(ALL_TARGETS).toHaveLength(4)
+describe("renderRulesFile", () => {
+  const template = "# Rules\n"
+
+  it("writes the template as is for targets without frontmatter", () => {
+    const claude = RULES_TARGETS.find((t) => t.id === "claude")
+    expect(claude && renderRulesFile(template, claude)).toBe(template)
+  })
+
+  it("prepends the frontmatter for Cursor", () => {
+    const cursor = RULES_TARGETS.find((t) => t.id === "cursor")
+    const content = cursor && renderRulesFile(template, cursor)
+    expect(content).toMatch(/^---\n/)
+    expect(content).toContain("alwaysApply: true")
+    expect(content?.endsWith(template)).toBe(true)
   })
 })
