@@ -122,7 +122,7 @@ Cascade — each level requires all previous signals:
 | Lv6 | `app/` + `shared/` + ≥1 folder under `domains/` (e.g. `domains/user/`) |
 | Lv7 | + ≥1 folder under `orchestrate/` (e.g. `orchestrate/order-inventory/`) |
 | Lv8 | + `shared/events.ts` |
-| Lv9 | + `infrastructure/` + any domain has `ports.ts` |
+| Lv9 | + any domain has `ports.ts` (`infrastructure/` is not required: a project that has only added `ports.ts` is Lv9 and gets `infrastructure-missing`) |
 | Lv10 | + any domain has `command/` AND `query/` subfolders (`query/` holds one query per file; `ports.ts` may live in `command/` / `query/`) |
 
 Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently (same level).
@@ -707,9 +707,9 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced). After Phase 33 (2026-11-02): all 79 catalog rules are implemented and all 336 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced). After Phase 33 (2026-11-02): all 79 catalog rules are implemented and all 336 tests pass. After Phase 38 (2026-11-03): 78 catalog rules, all 335 tests pass.
 
-The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
+The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported). Rebuilt again on 2026-11-03 from the not yet committed "plan A" changes on top of `4216d45` (78 rules, Lv9 without `infrastructure/`).
 
 Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors on `main` — 24 in `tests/fixtures/` (fixtures are type-checked although they import packages that are not installed or omit `.js` extensions) and 3 in `tests/unit/type-dependency-graph.test.ts` (`.sort()` on `readonly string[]`).
 
@@ -832,12 +832,11 @@ Thresholds (decided 2026-11-02; the catalog states them without numbers):
 | `orchestrate-imports-orchestrate` | `orchestrate-boundary` | A relative import in a file under `orchestrate/<a>/` that resolves into another `orchestrate/<b>/` |
 | `orchestrate-without-transaction` | `transactions` | No file of an `orchestrate/<name>/` folder calls `withTransaction()` (bare or as a method, e.g. `slime.withTransaction()`) |
 | `defer-suggestion` | `transactions` | Inside the callback of a `withTransaction()` call, a call to `fetch` or to a name imported from an external service package (mail, payments, HTTP clients — the list shared with `orchestrate-non-transactional-io`) or from a client module (`client.ts`, `client/adapter.ts`), unless it is inside `defer(...)` |
-| `events-file-missing` | `events-validation` | `shared/events.ts` does not exist |
 | `events-imports-domain` | `events-validation` | A relative import in `shared/events.ts` that resolves into `domains/` or `orchestrate/` |
 | `event-type-not-upper-snake` | `events-validation` | A string literal in the type of a `type` property in `shared/events.ts` that is not UPPER_SNAKE_CASE |
 
 - **Opt-in rules**: the catalog marks `defer-suggestion` "opt-in" and has no field for it, so Kaachan keeps the list (`OPT_IN_RULES` in `src/rules/runner.ts`). Its findings are dropped unless the rule is listed in `KaachanConfig.enabledRules` (CLI: `--enable-rule defer-suggestion`)
-- `events-file-missing` never fires on a detected level: Lv8 detection itself requires `shared/events.ts`, so a project without it is detected as Lv7. The rule is implemented as the catalog states and tested with the level fixed
+- `events-file-missing` was implemented here and removed in Phase 38: Lv8 detection itself requires `shared/events.ts`, so the rule could never fire
 - `lv8-clean/shared/events.ts` used dotted lowercase event types (`user.created`); it now uses UPPER_SNAKE_CASE as the theory requires
 - `EXTERNAL_SERVICE_PACKAGES` moved to `src/analysis/layer-modules.ts`
 - New fixture `lv8-orchestrate/`
@@ -846,7 +845,7 @@ Thresholds (decided 2026-11-02; the catalog states them without numbers):
 
 | Catalog rule | Module | How it is detected |
 |---|---|---|
-| `infrastructure-missing` | `ports-adapters` | No `infrastructure/` folder in the source root |
+| `infrastructure-missing` | `ports-adapters` | No `infrastructure/` folder in the source root (since Phase 38 Lv9 detection only needs `ports.ts`, so this is the mid-migration state) |
 | `domain-imports-infrastructure` | `ports-adapters` | A relative import in a file under `domains/<name>/` that resolves into `infrastructure/` |
 | `ports-has-implementation` | `ports-adapters` | A top-level statement in `ports.ts` (domain, `command/`, `query/`) other than a type alias, interface, import or re-export |
 | `store-remains` | `ports-adapters` | Any store file except `app/store.ts` (reported by `app-owns-store`), `shared/store.ts` included: the theory removes the word "store" from Lv9 on |
@@ -857,7 +856,7 @@ Thresholds (decided 2026-11-02; the catalog states them without numbers):
 | `query-multiple-per-file` | `cqrs-sides` | A `query/` file other than `ports.ts` with more than one exported function |
 
 - Level detection already expects one query per file: `hasQuery` only checks that `query/` exists, and `ports.ts` in `command/` / `query/` counts for Lv9 (Phase 26)
-- `infrastructure-missing` never fires on a detected level, like `events-file-missing`: Lv9 detection itself requires `infrastructure/`. Tested with the level fixed
+- `infrastructure-missing` could not fire on a detected level until Phase 38, because Lv9 detection required `infrastructure/`
 - New fixtures `lv9-ports/` and `lv10-sides/`
 
 Not in the catalog yet (proposals in the theory repository, do not implement until they land in `RULE_CATALOG`):
@@ -879,11 +878,21 @@ Not in the catalog yet (proposals in the theory repository, do not implement unt
 
 Order as implemented: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 34 → 35 → 36 → 33 (Phase 33 waited for its thresholds). Phase 37 was done independently.
 
+### Phase 38 — Lv9 detection without `infrastructure/`, `events-file-missing` removed ✅
+
+Follows the theory repository's change (2026-11-03, "plan A"), which removed two rules that could never fire on a detected level:
+
+- Lv9 detection: the shared `LEVEL_DEFINITIONS` dropped `infrastructure/` from the Lv8 → Lv9 requirements and changed the Lv9 `evidenceLabel` to `ports.ts in domain`. `src/level/detector.ts` reads the definitions, so only the now unused `infrastructure/` entry of `REQUIREMENT_CHECKS` was removed
+- A project that has only added `ports.ts` is now Lv9, so the Lv9 rules (`infrastructure-missing`, `orm-outside-infrastructure`, `store-remains`, ...) report the remaining migration work. This is intended. No existing fixture expected Lv8 with a `ports.ts`
+- `events-file-missing` is gone from the catalog; its check and test were removed from `events-validation`
+- `infrastructure-missing` is tested with real analysis on the new fixture `lv9-no-infrastructure/` (`ports.ts`, no `infrastructure/`), instead of a fixed level. Its message now says the migration is unfinished
+- The catalog summaries of `shared-size`, `app-size`, `app-route-size` (500 lines) and `cqrs-folders-missing` (upstream domains exempt) now state what Kaachan already does; Kaachan's messages needed no change
+
 ---
 
 ## Rule Activation Summary
 
-Since Phase 27 the activation level and severity of every rule come from `RULE_CATALOG`, and since Phase 33 all 79 catalog rules are reported by a module. The module → catalog rule table is in README.md ("Rules"); `tests/unit/registry.test.ts` checks that every catalog rule belongs to exactly one module.
+Since Phase 27 the activation level and severity of every rule come from `RULE_CATALOG`, and since Phase 33 every catalog rule (78 since Phase 38) is reported by a module. The module → catalog rule table is in README.md ("Rules"); `tests/unit/registry.test.ts` checks that every catalog rule belongs to exactly one module.
 
 ---
 

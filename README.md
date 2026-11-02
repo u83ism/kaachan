@@ -72,7 +72,7 @@ Kaachan infers the current level from file-system signals (no AST required). The
 | Lv6 | `app/` + `shared/` + ≥1 folder under `domains/` |
 | Lv7 | + ≥1 folder under `orchestrate/` |
 | Lv8 | + `shared/events.ts` |
-| Lv9 | + `infrastructure/` + any domain has `ports.ts` |
+| Lv9 | + any domain has `ports.ts` (`infrastructure/` is not required: a project that has only added `ports.ts` is Lv9 and gets `infrastructure-missing`) |
 | Lv10 | + any domain has `command/` AND `query/` subfolders (`ports.ts` may live in them) |
 
 Lv1–5 keep the layer files flat in the source root. From Lv6 they move into `app/`, `shared/` and `domains/`, so the domain structure is detected on its own without the flat Lv1–5 files. A project with neither `route.ts` nor a domain structure is reported as "No Slime Architecture level detected", and no rules run.
@@ -83,7 +83,7 @@ Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 
 ## Rules
 
-Diagnostics use the rule IDs of `RULE_CATALOG` in `@u83ism/architecture-rules` (79 rules), and the severity of each rule at each level comes from the catalog — Kaachan only detects. A rule that is not active at the detected level is not reported. The full list with severities per level is in the theory repository (`docs/ja/Lv別アーキテクチャリファレンス.md`, "Kaachan検査項目と重大度の一覧").
+Diagnostics use the rule IDs of `RULE_CATALOG` in `@u83ism/architecture-rules` (78 rules), and the severity of each rule at each level comes from the catalog — Kaachan only detects. A rule that is not active at the detected level is not reported. The full list with severities per level is in the theory repository (`docs/ja/Lv別アーキテクチャリファレンス.md`, "Kaachan検査項目と重大度の一覧").
 
 Kaachan groups the checks into modules. A module runs when at least one of its rules is active at the detected level:
 
@@ -115,7 +115,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app`, `app-size` |
 | `client-acl` | `client-direct-import` |
 | `fat-routing` | `app-route-size`, `app-route-defines-routes`, `route-dead-target`, `workflow-unreachable`, `domain-missing-routes` |
-| `events-validation` | `event-missing-type-field`, `event-class-type`, `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake` |
+| `events-validation` | `event-missing-type-field`, `event-class-type`, `events-imports-domain`, `event-type-not-upper-snake` |
 | `orchestrate-boundary` | `domain-imports-orchestrate`, `orchestrate-imports-orchestrate` |
 | `transactions` | `orchestrate-without-transaction`, `defer-suggestion` (opt-in) |
 | `cross-folder-concerns` | `orchestrate-non-transactional-io` |

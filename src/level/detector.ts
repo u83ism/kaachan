@@ -22,7 +22,6 @@ export const REQUIREMENT_CHECKS: Readonly<Record<string, Requirement>> = {
   "orchestrate/<name>/": (s) => s.orchestrateFolders.length >= 1,
   "shared/events.ts": (s) => s.hasSharedEvents,
   "ports.ts in domain folder": (s) => s.domainFolders.some((d) => d.hasPorts),
-  "infrastructure/": (s) => s.hasInfrastructureFolder,
   "command/ and query/ in domain folder": (s) =>
     s.domainFolders.some((d) => d.hasCommand && d.hasQuery),
 }

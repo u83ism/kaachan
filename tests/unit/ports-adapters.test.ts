@@ -3,13 +3,8 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
-import { createMorphProject } from "../../src/core/project.js"
-import { scanProject } from "../../src/core/scanner.js"
-import { portsAdaptersRule } from "../../src/rules/implementations/ports-adapters.js"
-import { runRules } from "../../src/rules/runner.js"
 import type { KaachanConfig } from "../../src/types/config.js"
 import type { Diagnostic } from "../../src/types/diagnostic.js"
-import type { RuleContext } from "../../src/types/rule.js"
 import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -64,22 +59,13 @@ describe("ports-adapters rule", () => {
     expect(await diagnosticsOf("lv6-tables", "ports-adapters")).toHaveLength(0)
   })
 
-  it("reports a missing infrastructure/ at Lv9", async () => {
-    // Level detection requires infrastructure/ for Lv9, so the rule is checked with the level fixed
-    const snapshot = scanProject(join(fixturesDir, "lv8-orchestrate"))
-    if (!snapshot.ok) throw new Error(snapshot.error)
-    const context: RuleContext = {
-      rootDir: snapshot.value.rootDir,
-      level: 9,
-      snapshot: snapshot.value,
-      slimeConfig: { kind: "missing" },
-      config: makeConfig(snapshot.value.rootDir),
-      morphProject: createMorphProject(snapshot.value.rootDir),
-      today: "2026-11-02",
-    }
-    const diags = (await runRules([portsAdaptersRule], context)).filter((d) => d.ruleId === "infrastructure-missing")
-    expect(diags.map((d) => `${d.severity}: ${d.message}`)).toEqual([
-      "warning: infrastructure/ does not exist — from Lv9 the port implementations live there",
+  it("reports a missing infrastructure/ when a domain has ports.ts (mid-migration)", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv9-no-infrastructure")))
+    if (!result.ok) throw new Error(result.error)
+    expect(result.value.level).toBe(9)
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "ports-adapters"))
+    expect(summaries(diags, "infrastructure-missing")).toEqual([
+      "warning: infrastructure/ does not exist although a domain has ports.ts — the move to Ports & Adapters is not finished",
     ])
   })
 })

@@ -9,7 +9,6 @@ import type { Rule, RuleContext } from "../../types/rule.js"
 const RULE_IDS = [
   "event-missing-type-field",
   "event-class-type",
-  "events-file-missing",
   "events-imports-domain",
   "event-type-not-upper-snake",
 ] as const
@@ -166,21 +165,10 @@ export const eventsValidationRule: Rule<Id> = {
   id: "events-validation",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    const sharedDir = join(context.snapshot.sourceRoot, FOLDER_NAMES.SHARED)
-    const eventsFilePath = join(sharedDir, SHARED_EVENTS_FILE)
+    // Level detection requires shared/events.ts from Lv8, so the file exists whenever this runs
+    if (!context.snapshot.hasSharedEvents) return []
 
-    if (!context.snapshot.hasSharedEvents) {
-      return [
-        {
-          ruleId: "events-file-missing",
-          message: "shared/events.ts does not exist — domain events need one place for their types",
-          location: { filePath: sharedDir },
-          suggestion:
-            "Create shared/events.ts and define each event as a plain type with an UPPER_SNAKE_CASE type field and a payload.",
-        },
-      ]
-    }
-
+    const eventsFilePath = join(context.snapshot.sourceRoot, FOLDER_NAMES.SHARED, SHARED_EVENTS_FILE)
     const sourceFile = loadSourceFile(context.morphProject, eventsFilePath)
     return [
       ...checkEventsFile(sourceFile, eventsFilePath),

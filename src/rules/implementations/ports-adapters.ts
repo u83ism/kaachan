@@ -24,7 +24,7 @@ const checkInfrastructureFolder = (context: RuleContext, infrastructureDir: stri
     : [
         {
           ruleId: "infrastructure-missing",
-          message: "infrastructure/ does not exist — from Lv9 the port implementations live there",
+          message: "infrastructure/ does not exist although a domain has ports.ts — the move to Ports & Adapters is not finished",
           location: { filePath: infrastructureDir },
           suggestion: "Create infrastructure/<domain>/ and implement each domain's ports.ts there with the ORM.",
         },
