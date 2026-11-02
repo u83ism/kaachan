@@ -1,6 +1,6 @@
-import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
+import { isOrmImport, lastSegment, loadSourceFile } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -10,23 +10,7 @@ const RULE_IDS = [
 ] as const
 type Id = (typeof RULE_IDS)[number]
 
-const ORM_PACKAGES = [
-  "@prisma/client",
-  "drizzle-orm",
-  "typeorm",
-  "@mikro-orm/core",
-  "sequelize",
-  "knex",
-  "mongoose",
-] as const
-
-const isOrmImport = (specifier: string): boolean =>
-  (ORM_PACKAGES as readonly string[]).includes(specifier)
-
-const isStoreImport = (specifier: string): boolean => {
-  const normalized = specifier.replace(/\.(js|ts)$/, "")
-  return normalized.split("/").at(-1) === "store"
-}
+const isStoreImport = (specifier: string): boolean => lastSegment(specifier) === "store"
 
 const checkParseDbAccess = (
   sourceFile: SourceFile,
@@ -79,24 +63,14 @@ export const parseViolationsRule: Rule<Id> = {
   id: "parse-violations",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    const diagnostics: Finding<Id>[] = []
+    const { morphProject, snapshot } = context
+    const load = (filePath: string): SourceFile => loadSourceFile(morphProject, filePath)
 
-    if (context.snapshot.hasParse && !context.snapshot.hasParseFolder) {
-      const parseFilePath = join(context.snapshot.sourceRoot, "parse.ts")
-      const parseFile =
-        context.morphProject.getSourceFile(parseFilePath) ??
-        context.morphProject.addSourceFileAtPath(parseFilePath)
-      diagnostics.push(...checkParseDbAccess(parseFile, parseFilePath))
-    }
-
-    if (context.snapshot.hasWorkflow) {
-      const workflowFilePath = join(context.snapshot.sourceRoot, "workflow.ts")
-      const workflowFile =
-        context.morphProject.getSourceFile(workflowFilePath) ??
-        context.morphProject.addSourceFileAtPath(workflowFilePath)
-      diagnostics.push(...checkWorkflowInlineParse(workflowFile, workflowFilePath))
-    }
-
-    return diagnostics
+    return [
+      ...snapshot.layerFiles.parse.flatMap((filePath) => checkParseDbAccess(load(filePath), filePath)),
+      ...snapshot.layerFiles.workflow.flatMap((filePath) =>
+        checkWorkflowInlineParse(load(filePath), filePath),
+      ),
+    ]
   },
 }

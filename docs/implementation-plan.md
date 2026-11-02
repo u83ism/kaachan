@@ -704,7 +704,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -714,7 +714,7 @@ Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors o
 
 - Recognize domains as the folders directly under `domains/`, coordinators as the folders directly under `orchestrate/` (`FOLDER_NAMES.DOMAINS`, `FOLDER_NAMES.ORCHESTRATE`). Non-kebab-case names are still recognized, so that `folder-name-not-kebab-case` (Phase 30) can report them
 - `hasRepository` → `hasStore` (`LAYER_FILES.STORE`); `crossFolders` → `orchestrateFolders` (name + absolute path)
-- Collect the paths of each layer file wherever it lives (`snapshot.layerFiles`): the source root, `app/`, `shared/`, each domain and its `command/` / `query/`, and each coordinator; `logic/` and `parse/` folders included (store, workflow, parse, logic). Rules currently hard-code `join(sourceRoot, "repository.ts")` etc., so from Lv6 they find nothing — e.g. the Lv6 error escalation of `store-naming` / `store-orm-return-type` would never fire. Rules switch to these lists in Phase 28
+- Collect the paths of each layer file wherever it lives (`snapshot.layerFiles`): the source root, `app/`, `shared/`, each domain and its `command/` / `query/`, and each coordinator; `logic/` and `parse/` folders included (store, workflow, parse, logic). Rules currently hard-code `join(sourceRoot, "repository.ts")` etc., so from Lv6 they find nothing — e.g. the Lv6 error escalation of `store-naming` / `store-orm-return-type` would never fire. Rules switched to these lists in Phase 28
 - Level detection reads `LEVEL_DEFINITIONS` (`getLevelDefinition`) for evidence labels and the files/folders missing for the next level, instead of duplicating them in `src/level/detector.ts`
 - A project without `route.ts` was reported as Lv1 (the detector started from 1). It now reports that no level was detected (`level: null`)
 - The Lv6+ domain structure is detected without the flat Lv1–5 files (see Level Detection Algorithm), and `ports.ts` in `command/` / `query/` counts for Lv9/Lv10
@@ -733,24 +733,27 @@ Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors o
   - `dep-direction`: "file outside `app/` imports from a domain" — replaced by the DAG
   - `fat-routing`: the `app/route.ts` growth hint — the catalog only has `app-route-size` (warning)
 
-### Phase 28 — Fix the 4 rules whose detection drifts from the catalog
+### Phase 28 — Fix the rules whose detection drifts from the catalog ✅
 
-Since Phase 27 the severities and active levels already follow the catalog (e.g. `slime-config-missing` and `workflow-throws-plain-error` from Lv3, `workflow-orm-import` and `client-direct-import` as errors, `app-owns-logic` as a warning at Lv6). What is left is what each rule detects:
+Since Phase 27 the severities and active levels already follow the catalog (e.g. `slime-config-missing` and `workflow-throws-plain-error` from Lv3, `workflow-orm-import` and `client-direct-import` as errors, `app-owns-logic` as a warning at Lv6). Phase 28 fixed what each rule detects:
 
-| Catalog rule | Current Kaachan behavior | Change |
+| Catalog rule | Before | Now |
 |---|---|---|
-| `route-handler-non-http` | `route-inline` flags every inline handler | Thin handlers doing HTTP I/O only are allowed; flag handlers calling store/logic/DB |
-| `workflow-throws-plain-error` | The message always says "use Result err" (wrong advice in Lv3–4) | The message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
-| `logic-store-client-import` | `logic-imports` flags only specifiers whose last segment is `store` or `client` | Also flag DB/ORM module imports (same ORM package list as the other rules) |
-| `domain-undeclared-import` | Any domain-to-domain import is an error | Allowed when declared in `slime.config.ts` (needs Phase 29) |
+| `route-handler-non-http` | `route-inline` flagged every inline handler | Thin handlers doing HTTP I/O only are allowed. A handler is flagged when it uses a name imported from a store/logic module or an ORM package, or a top-level variable initialized from one (`const prisma = new PrismaClient()`) |
+| `workflow-throws-plain-error` | The message always said "use Result err" (wrong advice in Lv3–4) | The message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
+| `logic-store-client-import` | `logic-imports` flagged only specifiers whose last segment is `store` or `client` | Also flags DB/ORM package imports |
 
-All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read the layer file lists collected in Phase 26 instead of fixed root paths, so they keep working after the Lv6 domain split. New rules in Phase 30 do the same.
+- All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read `snapshot.layerFiles` instead of fixed root paths, so they keep working after the Lv6 domain split (e.g. `store-naming` now reports an error for `domains/user/store.ts` at Lv6). A file inside `logic/` / `parse/` gets the folder checks, a `logic.ts` / `parse.ts` the single-file checks. New rules in Phase 30 do the same
+- The ORM package list, the subpath-aware ORM import check (`drizzle-orm/pg-core` counts) and source file loading live in `src/analysis/layer-modules.ts` instead of four copies
+- `domain-undeclared-import` moved to Phase 29, because it needs the dependency declaration
+- New fixtures `lv3-workflow-new-error/` and `lv6-domain-layer-files/`; `lv2-violations/route.ts` now has three DB-calling handlers and one thin handler
 
 ### Phase 29 — Read the domain DAG and table ownership from `slime.config.ts`
 
 - Read the `domains` declaration (`DomainDependencies` type from the shared package). Kaachan currently only checks that the file exists (`slime-config-hint`)
 - Read the `tables` declaration (`TableOwnership`): domain folder name → owned tables, written as the ORM model names that appear in code
-- Prerequisite for `domain-undeclared-import` (Phase 28), `domain-dependency-cycle` and the `table-*` rules (Phase 30)
+- `domain-undeclared-import`: any domain-to-domain import is currently an error. Allow the imports declared in `domains` (moved from Phase 28)
+- Prerequisite for `domain-dependency-cycle` and the `table-*` rules (Phase 30)
 
 ### Phase 30 — Unimplemented catalog rules (37)
 

@@ -50,18 +50,8 @@ export const logicTestsRule: Rule<Id> = {
   id: "logic-tests",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    const diagnostics: Finding<Id>[] = []
-    const { rootDir, snapshot } = context
-
-    if (snapshot.hasLogic && !snapshot.hasLogicFolder) {
-      const filePath = join(snapshot.sourceRoot, "logic.ts")
-      diagnostics.push(...checkLogicFile(filePath, rootDir))
-    }
-
-    for (const logicFilePath of snapshot.logicFolderFiles) {
-      diagnostics.push(...checkLogicFile(logicFilePath, rootDir))
-    }
-
-    return diagnostics
+    return context.snapshot.layerFiles.logic.flatMap((filePath) =>
+      checkLogicFile(filePath, context.rootDir),
+    )
   },
 }

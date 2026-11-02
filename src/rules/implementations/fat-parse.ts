@@ -1,5 +1,5 @@
-import { join } from "node:path"
 import { measureFile } from "../../analysis/line-counter.js"
+import { isInFolder } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { FatThresholds } from "../../types/config.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
@@ -11,25 +11,24 @@ const RULE_IDS = [
 ] as const
 type Id = (typeof RULE_IDS)[number]
 
-const checkParseFolder = (context: RuleContext): readonly Finding<Id>[] => {
-  const { errorLogicFolderLines } = context.config.thresholds
-  const diagnostics: Finding<Id>[] = []
+const PARSE_FOLDER = "parse"
 
-  for (const filePath of context.snapshot.parseFolderFiles) {
-    const metricsResult = measureFile(context.morphProject, filePath)
-    if (!metricsResult.ok) continue
+const checkParseFolderFile = (
+  filePath: string,
+  lineCount: number,
+  thresholds: FatThresholds,
+): readonly Finding<Id>[] => {
+  const { errorLogicFolderLines } = thresholds
+  if (lineCount <= errorLogicFolderLines) return []
 
-    if (metricsResult.value.lineCount > errorLogicFolderLines) {
-      diagnostics.push({
-        ruleId: "parse-folder-file-too-large",
-        message: `${filePath} exceeds ${errorLogicFolderLines} lines (${metricsResult.value.lineCount} lines) — split further or restructure`,
-        location: { filePath },
-        suggestion: "Split into smaller parse files within parse/.",
-      })
-    }
-  }
-
-  return diagnostics
+  return [
+    {
+      ruleId: "parse-folder-file-too-large",
+      message: `${filePath} exceeds ${errorLogicFolderLines} lines (${lineCount} lines) — split further or restructure`,
+      location: { filePath },
+      suggestion: "Split into smaller parse files within parse/.",
+    },
+  ]
 }
 
 const buildDiagnostics = (
@@ -68,18 +67,15 @@ export const fatParseRule: Rule<Id> = {
   id: "fat-parse",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    if (!context.snapshot.hasParse) return []
-    if (context.snapshot.hasParseFolder) return checkParseFolder(context)
+    const { thresholds } = context.config
+    return context.snapshot.layerFiles.parse.flatMap((filePath) => {
+      const result = measureFile(context.morphProject, filePath)
+      if (!result.ok) return []
 
-    const filePath = join(context.snapshot.sourceRoot, "parse.ts")
-    const result = measureFile(context.morphProject, filePath)
-    if (!result.ok) return []
-
-    return buildDiagnostics(
-      filePath,
-      result.value.lineCount,
-      result.value.functionCount,
-      context.config.thresholds,
-    )
+      const { lineCount, functionCount } = result.value
+      return isInFolder(filePath, PARSE_FOLDER)
+        ? checkParseFolderFile(filePath, lineCount, thresholds)
+        : buildDiagnostics(filePath, lineCount, functionCount, thresholds)
+    })
   },
 }

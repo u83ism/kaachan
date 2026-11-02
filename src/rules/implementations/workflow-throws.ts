@@ -1,7 +1,7 @@
-import { join } from "node:path"
-import { existsSync } from "node:fs"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
+import { loadSourceFile } from "../../analysis/layer-modules.js"
+import type { ArchitectureLevel } from "../../level/types.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -10,13 +10,31 @@ const RULE_IDS = [
 ] as const
 type Id = (typeof RULE_IDS)[number]
 
+/** From Lv5, business rejections travel as `err()` results; before that, as a thrown `DomainError` */
+const RESULT_ERRORS_FROM_LEVEL = 5
+
+type Advice = { readonly message: string; readonly suggestion: string }
+
+const adviceFor = (level: ArchitectureLevel): Advice =>
+  level >= RESULT_ERRORS_FROM_LEVEL
+    ? {
+        message: "workflow.ts throws a plain Error — return err() up to the route instead",
+        suggestion:
+          "Register the error code in slime.config.ts and return err(...) so the route maps it to an HTTP status.",
+      }
+    : {
+        message: "workflow.ts throws a plain Error — a business rejection would become HTTP 500; throw a typed DomainError",
+        suggestion:
+          "Register the error code in slime.config.ts and throw a DomainError with it, so the framework maps it to an HTTP status.",
+      }
+
 const checkWorkflowForNewError = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Finding<Id>[] => {
-  const throwStatements = sourceFile.getDescendantsOfKind(SyntaxKind.ThrowStatement)
-
-  return throwStatements
+  advice: Advice,
+): readonly Finding<Id>[] =>
+  sourceFile
+    .getDescendantsOfKind(SyntaxKind.ThrowStatement)
     .filter((stmt) => {
       const expr = stmt.getExpression()
       return (
@@ -26,47 +44,18 @@ const checkWorkflowForNewError = (
     })
     .map((stmt) => ({
       ruleId: "workflow-throws-plain-error",
-      message: `workflow.ts uses new Error() directly — define a DomainError string and use Result err instead`,
+      message: advice.message,
       location: { filePath, line: stmt.getStartLineNumber() },
-      suggestion:
-        "Register the error string in slime.config.ts and return err(...) from Logic or Adapter.",
+      suggestion: advice.suggestion,
     }))
-}
-
-const collectWorkflowPaths = (context: RuleContext): readonly string[] => {
-  const { sourceRoot, hasWorkflow, hasAppFolder, domainFolders } = context.snapshot
-  const paths: string[] = []
-
-  if (hasWorkflow) {
-    paths.push(join(sourceRoot, "workflow.ts"))
-  }
-
-  if (hasAppFolder) {
-    const appWorkflow = join(sourceRoot, "app", "workflow.ts")
-    if (existsSync(appWorkflow)) paths.push(appWorkflow)
-  }
-
-  for (const domain of domainFolders) {
-    const domainWorkflow = join(domain.absolutePath, "workflow.ts")
-    if (existsSync(domainWorkflow)) paths.push(domainWorkflow)
-  }
-
-  return paths
-}
 
 export const workflowThrowsRule: Rule<Id> = {
   id: "workflow-throws",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    const diagnostics: Finding<Id>[] = []
-
-    for (const filePath of collectWorkflowPaths(context)) {
-      const sourceFile =
-        context.morphProject.getSourceFile(filePath) ??
-        context.morphProject.addSourceFileAtPath(filePath)
-      diagnostics.push(...checkWorkflowForNewError(sourceFile, filePath))
-    }
-
-    return diagnostics
+    const advice = adviceFor(context.level)
+    return context.snapshot.layerFiles.workflow.flatMap((filePath) =>
+      checkWorkflowForNewError(loadSourceFile(context.morphProject, filePath), filePath, advice),
+    )
   },
 }

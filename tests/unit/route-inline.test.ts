@@ -22,16 +22,16 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
   ...overrides,
 })
 
-describe("route-inline rule — inline handler detection", () => {
-  it("emits a route-handler-non-http hint at Lv2 for each inline arrow function handler in route.ts", async () => {
+describe("route-inline rule — route handlers doing non-HTTP work", () => {
+  it("emits a route-handler-non-http hint at Lv2 for each inline handler that calls the database", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv2-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     const inlineHints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-handler-non-http" && d.message.includes("inline handler"),
+      (d) => d.ruleId === "route-handler-non-http" && d.message.includes("HTTP I/O"),
     )
-    expect(inlineHints.length).toBeGreaterThanOrEqual(2)
+    expect(inlineHints).toHaveLength(3)
     expect(inlineHints.every((d) => d.severity === "hint")).toBe(true)
   })
 
@@ -41,22 +41,43 @@ describe("route-inline rule — inline handler detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("HTTP I/O"),
     )
     expect(warnings.some((d) => d.message.includes(".get("))).toBe(true)
     expect(warnings.some((d) => d.message.includes(".post("))).toBe(true)
   })
 
-  it("emits warning for function expression inline handler", async () => {
+  it("flags a function expression handler too", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv2-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("HTTP I/O"),
     )
     // router.delete uses function expression
     expect(warnings.some((d) => d.message.includes(".delete("))).toBe(true)
+  })
+
+  it("names the store/logic/DB identifiers the handler uses", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv2-violations")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const get = result.value.diagnostics.find(
+      (d) => d.ruleId === "route-handler-non-http" && d.message.includes(".get("),
+    )
+    expect(get?.message).toContain("prisma")
+  })
+
+  it("does not flag a thin handler that only calls a workflow and sets HTTP output", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv2-violations")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const handlers = result.value.diagnostics.filter((d) => d.ruleId === "route-handler-non-http")
+    expect(handlers).toHaveLength(3)
+    expect(handlers.every((d) => !d.message.includes(".put("))).toBe(true)
   })
 
   it("does not flag route.ts with only imported handler references", async () => {
@@ -66,7 +87,7 @@ describe("route-inline rule — inline handler detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("HTTP I/O"),
     )
     expect(warnings).toHaveLength(0)
   })

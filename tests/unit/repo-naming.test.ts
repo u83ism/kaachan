@@ -108,3 +108,18 @@ describe("repo-naming rule — workflow ORM import", () => {
     expect(repoRuleDiagnostics).toHaveLength(0)
   })
 })
+
+describe("repo-naming rule — Lv6 domain store.ts", () => {
+  it("checks store.ts inside a domain folder and reports an error from Lv6", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-domain-layer-files")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.value.level).toBe(6)
+    const naming = result.value.diagnostics.filter((d) => d.ruleId === "store-naming")
+    expect(naming).toHaveLength(1)
+    expect(naming[0]?.severity).toBe("error")
+    expect(naming[0]?.message).toContain("fetchUserById")
+    expect(naming[0]?.location.filePath).toMatch(/domains[\\/]user[\\/]store\.ts$/)
+  })
+})

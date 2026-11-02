@@ -1,6 +1,6 @@
-import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
+import { loadSourceFile } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -28,23 +28,8 @@ export const logicThrowsRule: Rule<Id> = {
   id: "logic-throws",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    const diagnostics: Finding<Id>[] = []
-
-    if (context.snapshot.hasLogic && !context.snapshot.hasLogicFolder) {
-      const filePath = join(context.snapshot.sourceRoot, "logic.ts")
-      const sourceFile =
-        context.morphProject.getSourceFile(filePath) ??
-        context.morphProject.addSourceFileAtPath(filePath)
-      diagnostics.push(...checkLogicFileForThrows(sourceFile, filePath))
-    }
-
-    for (const logicFilePath of context.snapshot.logicFolderFiles) {
-      const sourceFile =
-        context.morphProject.getSourceFile(logicFilePath) ??
-        context.morphProject.addSourceFileAtPath(logicFilePath)
-      diagnostics.push(...checkLogicFileForThrows(sourceFile, logicFilePath))
-    }
-
-    return diagnostics
+    return context.snapshot.layerFiles.logic.flatMap((filePath) =>
+      checkLogicFileForThrows(loadSourceFile(context.morphProject, filePath), filePath),
+    )
   },
 }

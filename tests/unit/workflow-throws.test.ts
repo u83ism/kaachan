@@ -32,13 +32,24 @@ describe("workflow-throws rule", () => {
     expect(diags.every((d) => d.severity === "warning")).toBe(true)
   })
 
-  it("warning message mentions DomainError and Result", async () => {
+  it("advises returning err() from Lv5", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-workflow-new-error")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
     const diag = result.value.diagnostics.find((d) => isFrom(d, "workflow-throws"))
-    expect(diag?.message).toContain("DomainError")
-    expect(diag?.message).toContain("Result")
+    expect(diag?.message).toContain("err()")
+    expect(diag?.message).not.toContain("DomainError")
+  })
+
+  it("advises throwing a DomainError in Lv3–4", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv3-workflow-new-error")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBe(3)
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "workflow-throws"))
+    expect(diags).toHaveLength(2)
+    expect(diags.every((d) => d.message.includes("DomainError"))).toBe(true)
+    expect(diags.every((d) => !d.message.includes("err()"))).toBe(true)
   })
 
   it("emits no diagnostics when workflow.ts has no new Error() throws", async () => {

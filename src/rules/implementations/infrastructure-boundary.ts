@@ -1,6 +1,7 @@
 import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { SyntaxKind } from "ts-morph"
+import { isOrmImport } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 import type { DomainFolder } from "../../types/analysis.js"
@@ -11,16 +12,6 @@ const RULE_IDS = [
 ] as const
 type Id = (typeof RULE_IDS)[number]
 
-const ORM_PACKAGES = [
-  "@prisma/client",
-  "drizzle-orm",
-  "typeorm",
-  "@mikro-orm/core",
-  "sequelize",
-  "knex",
-  "mongoose",
-] as const
-
 const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
 
 const isInsideDir = (filePath: string, dir: string): boolean => {
@@ -28,11 +19,6 @@ const isInsideDir = (filePath: string, dir: string): boolean => {
   const nDir = normalizeSep(dir)
   return nFile === nDir || nFile.startsWith(nDir + "/")
 }
-
-const isOrmImport = (specifier: string): boolean =>
-  (ORM_PACKAGES as readonly string[]).some(
-    (pkg) => specifier === pkg || specifier.startsWith(pkg + "/"),
-  )
 
 /**
  * Returns true when the parameter's type node is TypeReference (named type, e.g. UserPorts)

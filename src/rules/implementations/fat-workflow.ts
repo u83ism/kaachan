@@ -1,4 +1,3 @@
-import { join } from "node:path"
 import { measureFile } from "../../analysis/line-counter.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { FatThresholds } from "../../types/config.js"
@@ -45,17 +44,16 @@ export const fatWorkflowRule: Rule<Id> = {
   id: "fat-workflow",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    if (!context.snapshot.hasWorkflow) return []
+    return context.snapshot.layerFiles.workflow.flatMap((filePath) => {
+      const result = measureFile(context.morphProject, filePath)
+      if (!result.ok) return []
 
-    const filePath = join(context.snapshot.sourceRoot, "workflow.ts")
-    const result = measureFile(context.morphProject, filePath)
-    if (!result.ok) return []
-
-    return buildDiagnostics(
-      filePath,
-      result.value.lineCount,
-      result.value.functionCount,
-      context.config.thresholds,
-    )
+      return buildDiagnostics(
+        filePath,
+        result.value.lineCount,
+        result.value.functionCount,
+        context.config.thresholds,
+      )
+    })
   },
 }

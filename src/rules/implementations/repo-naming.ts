@@ -1,6 +1,6 @@
-import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
+import { isOrmImport, loadSourceFile } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -13,16 +13,6 @@ type Id = (typeof RULE_IDS)[number]
 const VALID_PREFIXES = [
   "find", "list", "get", "count", "search",
   "create", "save", "update", "delete", "remove",
-] as const
-
-const ORM_PACKAGES = [
-  "@prisma/client",
-  "drizzle-orm",
-  "typeorm",
-  "@mikro-orm/core",
-  "sequelize",
-  "knex",
-  "mongoose",
 ] as const
 
 const hasValidPrefix = (name: string): boolean =>
@@ -48,14 +38,7 @@ const getExportedFunctionNames = (sourceFile: SourceFile): readonly string[] => 
   return [...fromDeclarations, ...fromArrows]
 }
 
-const checkStoreNaming = (context: RuleContext): readonly Finding<Id>[] => {
-  if (!context.snapshot.hasStore) return []
-
-  const filePath = join(context.snapshot.sourceRoot, "store.ts")
-  const sourceFile =
-    context.morphProject.getSourceFile(filePath) ??
-    context.morphProject.addSourceFileAtPath(filePath)
-
+const checkStoreNaming = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const violations = getExportedFunctionNames(sourceFile).filter(
     (name) => !hasValidPrefix(name),
   )
@@ -74,18 +57,11 @@ const checkStoreNaming = (context: RuleContext): readonly Finding<Id>[] => {
   }))
 }
 
-const checkWorkflowOrmImports = (context: RuleContext): readonly Finding<Id>[] => {
-  if (!context.snapshot.hasWorkflow) return []
-
-  const filePath = join(context.snapshot.sourceRoot, "workflow.ts")
-  const sourceFile =
-    context.morphProject.getSourceFile(filePath) ??
-    context.morphProject.addSourceFileAtPath(filePath)
-
+const checkWorkflowOrmImports = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const ormImports = sourceFile
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue())
-    .filter((spec): spec is string => (ORM_PACKAGES as readonly string[]).includes(spec))
+    .filter(isOrmImport)
 
   if (ormImports.length === 0) return []
 
@@ -103,9 +79,14 @@ export const repoNamingRule: Rule<Id> = {
   id: "repo-naming",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
+    const { morphProject, snapshot } = context
     return [
-      ...checkStoreNaming(context),
-      ...checkWorkflowOrmImports(context),
+      ...snapshot.layerFiles.store.flatMap((filePath) =>
+        checkStoreNaming(loadSourceFile(morphProject, filePath), filePath),
+      ),
+      ...snapshot.layerFiles.workflow.flatMap((filePath) =>
+        checkWorkflowOrmImports(loadSourceFile(morphProject, filePath), filePath),
+      ),
     ]
   },
 }

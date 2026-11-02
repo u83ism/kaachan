@@ -1,4 +1,5 @@
-import { join } from "node:path"
+import { FOLDER_NAMES } from "@u83ism/architecture-rules"
+import { isInFolder } from "../../analysis/layer-modules.js"
 import { measureFile } from "../../analysis/line-counter.js"
 import { checkPrefixes } from "../../analysis/prefix-checker.js"
 import { buildTypeDependencyGraph } from "../../analysis/type-dependency-graph.js"
@@ -33,8 +34,7 @@ const buildPrefixMixingDiagnostic = (
       : "Split into domain-specific files (e.g. logic/user.ts, logic/order.ts).",
 })
 
-const checkLogicFile = (context: RuleContext): readonly Finding<Id>[] => {
-  const filePath = join(context.snapshot.sourceRoot, "logic.ts")
+const checkLogicFile = (context: RuleContext, filePath: string): readonly Finding<Id>[] => {
   const metricsResult = measureFile(context.morphProject, filePath)
   if (!metricsResult.ok) return []
 
@@ -84,29 +84,27 @@ const checkLogicFile = (context: RuleContext): readonly Finding<Id>[] => {
   return diagnostics
 }
 
-const checkLogicFolder = (context: RuleContext): readonly Finding<Id>[] => {
+const checkLogicFolderFile = (context: RuleContext, filePath: string): readonly Finding<Id>[] => {
   const { errorLogicFolderLines } = context.config.thresholds
+  const metricsResult = measureFile(context.morphProject, filePath)
+  if (!metricsResult.ok) return []
+
   const diagnostics: Finding<Id>[] = []
 
-  for (const filePath of context.snapshot.logicFolderFiles) {
-    const metricsResult = measureFile(context.morphProject, filePath)
-    if (!metricsResult.ok) continue
+  if (metricsResult.value.lineCount > errorLogicFolderLines) {
+    diagnostics.push({
+      ruleId: "logic-folder-file-too-large",
+      message: `${filePath} exceeds ${errorLogicFolderLines} lines (${metricsResult.value.lineCount} lines) — domain split is overdue`,
+      location: { filePath },
+      suggestion: "Split into smaller domain-specific files within logic/.",
+    })
+  }
 
-    if (metricsResult.value.lineCount > errorLogicFolderLines) {
-      diagnostics.push({
-        ruleId: "logic-folder-file-too-large",
-        message: `${filePath} exceeds ${errorLogicFolderLines} lines (${metricsResult.value.lineCount} lines) — domain split is overdue`,
-        location: { filePath },
-        suggestion: "Split into smaller domain-specific files within logic/.",
-      })
-    }
-
-    const sourceFile = context.morphProject.getSourceFile(filePath)
-    if (sourceFile !== undefined) {
-      const prefixResult = checkPrefixes(sourceFile)
-      if (prefixResult.hasMixing) {
-        diagnostics.push(buildPrefixMixingDiagnostic(filePath, "error", prefixResult.prefixes))
-      }
+  const sourceFile = context.morphProject.getSourceFile(filePath)
+  if (sourceFile !== undefined) {
+    const prefixResult = checkPrefixes(sourceFile)
+    if (prefixResult.hasMixing) {
+      diagnostics.push(buildPrefixMixingDiagnostic(filePath, "error", prefixResult.prefixes))
     }
   }
 
@@ -117,8 +115,10 @@ export const fatLogicRule: Rule<Id> = {
   id: "fat-logic",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    if (!context.snapshot.hasLogic) return []
-    if (context.snapshot.hasLogicFolder) return checkLogicFolder(context)
-    return checkLogicFile(context)
+    return context.snapshot.layerFiles.logic.flatMap((filePath) =>
+      isInFolder(filePath, FOLDER_NAMES.LOGIC)
+        ? checkLogicFolderFile(context, filePath)
+        : checkLogicFile(context, filePath),
+    )
   },
 }

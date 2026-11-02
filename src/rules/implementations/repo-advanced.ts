@@ -1,6 +1,6 @@
-import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { FunctionDeclaration, SourceFile, VariableDeclaration } from "ts-morph"
+import { isOrmImport, loadSourceFile } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -9,19 +9,6 @@ const RULE_IDS = [
   "workflow-orm-transaction",
 ] as const
 type Id = (typeof RULE_IDS)[number]
-
-const ORM_PACKAGES = [
-  "@prisma/client",
-  "drizzle-orm",
-  "typeorm",
-  "@mikro-orm/core",
-  "sequelize",
-  "knex",
-  "mongoose",
-] as const
-
-const isOrmImport = (specifier: string): boolean =>
-  (ORM_PACKAGES as readonly string[]).includes(specifier)
 
 // Collect type and namespace names imported from ORM packages in this file
 const getOrmImportedNames = (sourceFile: SourceFile): ReadonlySet<string> => {
@@ -79,14 +66,7 @@ const getReturnTypeText = (fn: ExportedFn): string | undefined => {
 
 // --- Check 1: ORM type leaking through store.ts return types ---
 
-const checkRepoOrmLeak = (context: RuleContext): readonly Finding<Id>[] => {
-  if (!context.snapshot.hasStore) return []
-
-  const filePath = join(context.snapshot.sourceRoot, "store.ts")
-  const sourceFile =
-    context.morphProject.getSourceFile(filePath) ??
-    context.morphProject.addSourceFileAtPath(filePath)
-
+const checkRepoOrmLeak = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const ormNames = getOrmImportedNames(sourceFile)
   if (ormNames.size === 0) return []
 
@@ -113,14 +93,7 @@ const checkRepoOrmLeak = (context: RuleContext): readonly Finding<Id>[] => {
 
 // --- Check 2: workflow.ts calling ORM transaction API directly ---
 
-const checkWorkflowTransaction = (context: RuleContext): readonly Finding<Id>[] => {
-  if (!context.snapshot.hasWorkflow) return []
-
-  const filePath = join(context.snapshot.sourceRoot, "workflow.ts")
-  const sourceFile =
-    context.morphProject.getSourceFile(filePath) ??
-    context.morphProject.addSourceFileAtPath(filePath)
-
+const checkWorkflowTransaction = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const transactionCalls = sourceFile
     .getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)
     .filter((pa) => pa.getName() === "$transaction")
@@ -142,6 +115,14 @@ export const repoAdvancedRule: Rule<Id> = {
   id: "repo-advanced",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    return [...checkRepoOrmLeak(context), ...checkWorkflowTransaction(context)]
+    const { morphProject, snapshot } = context
+    return [
+      ...snapshot.layerFiles.store.flatMap((filePath) =>
+        checkRepoOrmLeak(loadSourceFile(morphProject, filePath), filePath),
+      ),
+      ...snapshot.layerFiles.workflow.flatMap((filePath) =>
+        checkWorkflowTransaction(loadSourceFile(morphProject, filePath), filePath),
+      ),
+    ]
   },
 }

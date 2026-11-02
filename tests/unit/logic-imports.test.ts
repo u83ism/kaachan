@@ -99,3 +99,17 @@ describe("logic-imports rule — logic/ folder violations", () => {
     expect(errors[0]?.message).toContain("store")
   })
 })
+
+describe("logic-imports rule — DB/ORM modules", () => {
+  it("emits an error when a domain logic.ts imports an ORM package", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-domain-layer-files")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const errors = result.value.diagnostics.filter((d) => d.ruleId === "logic-store-client-import")
+    expect(errors).toHaveLength(1)
+    expect(errors[0]?.severity).toBe("error")
+    expect(errors[0]?.message).toContain("@prisma/client")
+    expect(errors[0]?.location.filePath).toMatch(/domains[\\/]user[\\/]logic\.ts$/)
+  })
+})
