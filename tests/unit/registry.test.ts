@@ -6,11 +6,8 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phase 33). Remove an ID here when its rule is implemented */
-const NOT_YET_IMPLEMENTED = [
-  "domain-pair-coordinated",
-  "domain-folder-thin",
-]
+/** Catalog rules no module reports yet. Remove an ID here when its rule is implemented */
+const NOT_YET_IMPLEMENTED: readonly string[] = []
 
 const reportedIds = BUILT_IN_RULES.flatMap((r) => r.ruleIds)
 

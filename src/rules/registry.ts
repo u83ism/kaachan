@@ -35,6 +35,7 @@ import { orchestrateBoundaryRule } from "./implementations/orchestrate-boundary.
 import { transactionsRule } from "./implementations/transactions.js"
 import { portsAdaptersRule } from "./implementations/ports-adapters.js"
 import { cqrsSidesRule } from "./implementations/cqrs-sides.js"
+import { domainMergeHintsRule } from "./implementations/domain-merge-hints.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -71,6 +72,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   transactionsRule,
   portsAdaptersRule,
   cqrsSidesRule,
+  domainMergeHintsRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

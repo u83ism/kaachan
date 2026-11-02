@@ -122,9 +122,10 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
 | `ports-adapters` | `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
+| `domain-merge-hints` | `domain-pair-coordinated`, `domain-folder-thin` |
 | `cqrs-sides` | `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file` |
 
-The remaining 2 catalog rules are not implemented yet (see Phase 33 in `docs/implementation-plan.md`).
+Every catalog rule is reported by exactly one module. `defer-suggestion` is opt-in (`--enable-rule defer-suggestion`).
 
 ### Severity Escalation
 

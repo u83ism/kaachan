@@ -707,7 +707,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced).
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced). After Phase 33 (2026-11-02): all 79 catalog rules are implemented and all 336 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -760,7 +760,7 @@ Since Phase 27 the severities and active levels already follow the catalog (e.g.
 - `tables` is read but not used yet; `domain-dependency-cycle` comes in Phase 31 and the `table-*` rules in Phase 32
 - New fixtures `lv6-declared-deps/` and `lv6-unreadable-config/`; parser unit tests in `tests/unit/slime-config.test.ts`
 
-The 37 catalog rules not implemented yet are split into Phases 30–35, grouped by level and by what the detection needs. Implement in this order. Severities come from the catalog (Phase 27), and every rule on layer files reads `snapshot.layerFiles` (Phase 28). When a rule is implemented, remove its ID from `NOT_YET_IMPLEMENTED` in `tests/unit/registry.test.ts`.
+The 37 catalog rules not implemented after Phase 29 were split into Phases 30–35, grouped by level and by what the detection needs (all done; Phase 33 last, after its thresholds were decided). Severities come from the catalog (Phase 27), and every rule on layer files reads `snapshot.layerFiles` (Phase 28). When a rule is implemented, remove its ID from `NOT_YET_IMPLEMENTED` in `tests/unit/registry.test.ts`.
 
 ### Phase 30 — Lv2–5 rules (8) ✅
 
@@ -813,14 +813,16 @@ Detection (`src/analysis/table-access.ts`):
 - Each table and access kind is reported once per file, at its first access. Without a `tables` declaration every touched table is `table-owner-undeclared` (a hint, meant as the inventory for the declaration)
 - New fixtures `lv6-tables/` and `lv10-tables/`; extraction unit tests in `tests/unit/table-access.test.ts`
 
-### Phase 33 — Lv6 domain merge / re-cut hints (2)
+### Phase 33 — Lv6 domain merge / re-cut hints (2) ✅
 
-- `domain-pair-coordinated`, `domain-folder-thin`
+- `domain-pair-coordinated`, `domain-folder-thin` (module `domain-merge-hints`). Both are hints and never escalate: whether a boundary is wrong is a human judgment
 
-Both are hints, and the catalog states them without numbers. Decide the thresholds before implementing:
+Thresholds (decided 2026-11-02; the catalog states them without numbers):
 
-- `domain-pair-coordinated` — how many co-occurrences of the same domain pair in `app/` or `orchestrate/` count as "repeatedly"
-- `domain-folder-thin` — what "very little in it" means (line count, number of layer files, or both)
+- `domain-pair-coordinated` — the same domain pair is imported together by **2 or more** files under `app/` or `orchestrate/` (test files excluded). Domains are found by resolving relative imports into `domains/<name>/`; one hint per pair, listing the files
+- `domain-folder-thin` — the non-test `.ts` files under `domains/<name>/` add up to **fewer than 50 lines**. The number of layer files is not used, so a small but deliberate upstream domain (e.g. `auth`) is reported too; the suggestion says to keep it in that case
+- Both thresholds are constants in `src/rules/implementations/domain-merge-hints.ts`, not configurable
+- New fixture `lv6-merge-hints/`
 
 ### Phase 34 — Lv7–8 rules (7) ✅
 
@@ -875,40 +877,13 @@ Not in the catalog yet (proposals in the theory repository, do not implement unt
 - The theory repository was renamed from `kaachan-and-slime-docs` to `slime-architecture-rules`: updated `CLAUDE.md`, `README.md` and `.claude/skills/sync-docs/SKILL.md`
 - Ran `sync-docs` from `95f0734` to `4216d45` (2026-11-02) and updated `overview.md` / `kaachan-design.md`
 
-Order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35. Phases 36 and 37 are independent.
+Order as implemented: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 34 → 35 → 36 → 33 (Phase 33 waited for its thresholds). Phase 37 was done independently.
 
 ---
 
-## Rule Activation Summary (complete)
+## Rule Activation Summary
 
-| Rule ID | Active from | Phase |
-|---|---|---|
-| `fat-workflow` | Lv2 | Phase 4 ✅ |
-| `route-inline` | Lv2 | Phase 20 ✅ |
-| `fat-parse` | Lv3 | Phase 4 ✅ (parse/ folder: Phase 21) |
-| `parse-violations` | Lv3 | Phase 12 ✅ |
-| `repo-naming` | Lv4 | Phase 7 ✅ |
-| `repo-orm-leak` | Lv4 | Phase 13 ✅ |
-| `workflow-transaction` | Lv4 | Phase 13 ✅ |
-| `fat-logic` | Lv5 | Phase 4–6 ✅ |
-| `logic-imports` | Lv5 | Phase 8 ✅ |
-| `logic-throws` | Lv5 | Phase 11 ✅ |
-| `logic-tests` | Lv5 (warn) → Lv7 (error) | Phase 11 ✅ |
-| `workflow-throws` | Lv5 | Phase 22 |
-| `slime-config-hint` | Lv5 | Phase 23 |
-| `dep-direction` | Lv6 | Phase 9 ✅ |
-| `app-layer` | Lv6 | Phase 14 ✅ |
-| `client-acl` | Lv6 | Phase 14 ✅ |
-| `fat-routing` | Lv6 | Phase 15 ✅ (co-location: Phase 24) |
-| `app-structure` | Lv7 | Phase 16 ✅ |
-| `nested-domain` | Lv7 | Phase 16 ✅ |
-| `events-validation` | Lv8 | Phase 17 ✅ |
-| `cross-folder-concerns` | Lv8 | Phase 17 ✅ |
-| `infrastructure-boundary` | Lv9 | Phase 18 ✅ |
-| `cqrs-enforcement` | Lv10 | Phase 19 ✅ |
-| `export:rules` CLI | — | Phase 25 |
-
-Since Phase 27, diagnostics carry the 79 catalog rule IDs; the IDs above are the module IDs (see the module → catalog rule table in README.md).
+Since Phase 27 the activation level and severity of every rule come from `RULE_CATALOG`, and since Phase 33 all 79 catalog rules are reported by a module. The module → catalog rule table is in README.md ("Rules"); `tests/unit/registry.test.ts` checks that every catalog rule belongs to exactly one module.
 
 ---
 

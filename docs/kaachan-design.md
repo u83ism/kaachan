@@ -36,7 +36,7 @@ Domain splitting at Lv6 is a large task — extracting store, workflow, and logi
 | Detecting line count, prefix mixing, type non-intersection (objective facts) | Kaachan (static analysis) |
 | Understanding the context of "why split" and proposing specific splits | AI via rules file |
 | Final decision on "where to cut" | User + AI dialogue |
-| Detecting signs for merging / re-cutting domains (the same domain pair coordinated repeatedly, thin domains) | Kaachan (hint only, never escalated) |
+| Detecting signs for merging / re-cutting domains (the same domain pair imported together by 2+ `app/` / `orchestrate/` files; a domain with fewer than 50 lines of non-test code) | Kaachan (hint only, never escalated) |
 
 Kaachan detects "what is happening". The rules file tells AI "what should be done". This clear role separation allows each to cover what the other cannot.
 
