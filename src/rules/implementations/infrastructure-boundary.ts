@@ -70,7 +70,7 @@ const checkOrmBoundary = (context: RuleContext): readonly Diagnostic[] => {
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "error",
-        message: `${domainOwner.name}/ imports ORM (${ormImports.join(", ")}) directly — domain files must not access the database`,
+        message: `domains/${domainOwner.name}/ imports ORM (${ormImports.join(", ")}) directly — domain files must not access the database`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
           "Define a port in ports.ts and implement it in infrastructure/ using the ORM. Inject the port into workflow.ts.",
@@ -133,7 +133,7 @@ const checkWorkflowPortAcceptance = (context: RuleContext): readonly Diagnostic[
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "hint",
-        message: `${domain.name}/workflow.ts has ports.ts but no exported function accepts a function-type or port parameter`,
+        message: `domains/${domain.name}/workflow.ts has ports.ts but no exported function accepts a function-type or port parameter`,
         location: { filePath: workflowPath },
         suggestion:
           "Inject ports as a parameter (e.g., `createUser(ports: UserPorts) => async (input) => {...}`) to decouple from infrastructure.",

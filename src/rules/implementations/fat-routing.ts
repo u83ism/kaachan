@@ -81,7 +81,7 @@ export const fatRoutingRule: Rule = {
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "warning",
-        message: `app/route.ts defines routes directly — at Lv6, move to domain/*/routes.ts`,
+        message: `app/route.ts defines routes directly — at Lv6, move to domains/*/routes.ts`,
         location: { filePath: appRouteFile },
         details: urlLiterals.map((n) => n.getLiteralValue()),
         suggestion: "Extract route definitions into domain-specific route.ts files.",
@@ -120,7 +120,7 @@ export const fatRoutingRule: Rule = {
         diagnostics.push({
           ruleId: RULE_ID,
           severity: "hint",
-          message: `${domain.name}/workflow.ts is not imported by any route file — may be unreachable`,
+          message: `domains/${domain.name}/workflow.ts is not imported by any route file — may be unreachable`,
           location: { filePath: workflowPath },
           suggestion: "Verify this workflow is reachable via a route or remove if unused.",
         })
@@ -137,7 +137,7 @@ export const fatRoutingRule: Rule = {
         diagnostics.push({
           ruleId: RULE_ID,
           severity: "hint",
-          message: `${domain.name}/ is missing routes.ts — consider co-locating route definitions at Lv6+`,
+          message: `domains/${domain.name}/ is missing routes.ts — consider co-locating route definitions at Lv6+`,
           location: { filePath: domain.absolutePath },
           suggestion: "Create routes.ts in the domain folder and import it from app/route.ts.",
         })

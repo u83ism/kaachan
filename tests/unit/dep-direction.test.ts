@@ -22,7 +22,7 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
 })
 
 describe("dep-direction rule — cross-domain imports", () => {
-  it("emits error when domainA imports from domainB", async () => {
+  it("emits error when one domain imports from another", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv6-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -32,8 +32,8 @@ describe("dep-direction rule — cross-domain imports", () => {
     )
     const crossDomainError = errors.find((d) => d.message.includes("Cross-domain import"))
     expect(crossDomainError).toBeDefined()
-    expect(crossDomainError?.message).toContain("domainOrder")
-    expect(crossDomainError?.message).toContain("domainUser")
+    expect(crossDomainError?.message).toContain('"order"')
+    expect(crossDomainError?.message).toContain('"user"')
   })
 
   it("emits error when a file outside app/ imports from a domain", async () => {
@@ -48,7 +48,7 @@ describe("dep-direction rule — cross-domain imports", () => {
         d.message.includes("outside app/"),
     )
     expect(errors.length).toBeGreaterThan(0)
-    expect(errors[0]?.message).toContain("domainUser")
+    expect(errors[0]?.message).toContain('"user"')
   })
 
   it("emits warning when shared/ imports from a domain", async () => {
@@ -60,7 +60,7 @@ describe("dep-direction rule — cross-domain imports", () => {
       (d) => d.ruleId === "dep-direction" && d.severity === "warning",
     )
     expect(warnings).toHaveLength(1)
-    expect(warnings[0]?.message).toContain("domainUser")
+    expect(warnings[0]?.message).toContain('"user"')
   })
 
   it("does not emit error for app/ importing from a domain", async () => {

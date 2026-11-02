@@ -10,6 +10,7 @@ import {
   outputPathForTarget,
   ALL_TARGETS,
 } from "./export-rules.js"
+import { isLevelDetected } from "../types/config.js"
 import type { KaachanConfig } from "../types/config.js"
 import type { RulesTarget } from "./export-rules.js"
 
@@ -86,6 +87,11 @@ exportRulesCommand.action(async (pathArg: string, options: { target?: string }) 
 
   if (!result.ok) {
     console.error(`Error: ${result.error}`)
+    process.exit(1)
+  }
+
+  if (!isLevelDetected(result.value)) {
+    console.error("Error: no Slime Architecture level detected — rules files are generated per level")
     process.exit(1)
   }
 

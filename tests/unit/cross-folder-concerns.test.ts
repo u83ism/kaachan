@@ -22,7 +22,7 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
 })
 
 describe("cross-folder-concerns rule — external service detection", () => {
-  it("emits warning when cross- folder imports an external service package", async () => {
+  it("emits warning when an orchestrate/ folder imports an external service package", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv8-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -32,10 +32,10 @@ describe("cross-folder-concerns rule — external service detection", () => {
     )
     expect(warnings.length).toBeGreaterThanOrEqual(1)
     expect(warnings.some((d) => d.message.includes("nodemailer"))).toBe(true)
-    expect(warnings.some((d) => d.message.includes("cross-order"))).toBe(true)
+    expect(warnings.some((d) => d.message.includes("orchestrate/order/"))).toBe(true)
   })
 
-  it("does not flag cross- folders with no external service imports", async () => {
+  it("does not flag orchestrate/ folders with no external service imports", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv8-clean")))
     expect(result.ok).toBe(true)
     if (!result.ok) return

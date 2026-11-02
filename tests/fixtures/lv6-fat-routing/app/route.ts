@@ -1,4 +1,4 @@
-import { handleOrder } from "../domainOrder/workflow.js"
+import { handleOrder } from "../domains/order/workflow.js"
 import { missing } from "./non-existent.js"
 
 // Route definitions should live in domain/*/route.ts at Lv6

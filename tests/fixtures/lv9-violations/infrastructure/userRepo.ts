@@ -1,6 +1,6 @@
 // OK: infrastructure/ is the only place allowed to import ORM
 import { PrismaClient } from "@prisma/client"
-import type { UserPorts } from "../domainUser/ports.js"
+import type { UserPorts } from "../domains/user/ports.js"
 
 const prisma = new PrismaClient()
 

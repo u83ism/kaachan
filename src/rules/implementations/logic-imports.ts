@@ -5,7 +5,7 @@ import type { Rule, RuleContext } from "../../types/rule.js"
 
 const RULE_ID = "logic-imports"
 
-const FORBIDDEN_LAYER_MODULES = ["repository", "client"] as const
+const FORBIDDEN_LAYER_MODULES = ["store", "client"] as const
 
 const extractLastSegment = (specifier: string): string => {
   const normalized = specifier.replace(/\.(js|ts)$/, "")
@@ -26,7 +26,7 @@ const checkLogicFile = (sourceFile: SourceFile, filePath: string): readonly Diag
   return violations.map((spec) => ({
     ruleId: RULE_ID,
     severity: "error" as const,
-    message: `Logic file imports "${spec}" — Logic layer must not depend on Repository or Client`,
+    message: `Logic file imports "${spec}" — Logic layer must not depend on Store or Client`,
     location: { filePath },
     suggestion:
       "Move DB/client access to workflow.ts and pass results into logic functions as arguments.",

@@ -1,129 +1,80 @@
+import { LAYER_FILES, LEVEL_DEFINITIONS, getLevelDefinition } from "@u83ism/architecture-rules"
 import type { ProjectSnapshot } from "../types/analysis.js"
 import type { ArchitectureLevel, LevelResult } from "./types.js"
 
-const meetsLv1 = (s: ProjectSnapshot): boolean => s.hasRoute
+type Requirement = (s: ProjectSnapshot) => boolean
 
-const meetsLv2 = (s: ProjectSnapshot): boolean =>
-  meetsLv1(s) && s.hasWorkflow && s.hasMiddleware
-
-const meetsLv3 = (s: ProjectSnapshot): boolean => meetsLv2(s) && s.hasParse
-
-const meetsLv4 = (s: ProjectSnapshot): boolean =>
-  meetsLv3(s) && s.hasRepository && s.hasClient
-
-const meetsLv5 = (s: ProjectSnapshot): boolean => meetsLv4(s) && s.hasLogic
-
-const meetsLv6 = (s: ProjectSnapshot): boolean =>
-  meetsLv5(s) && s.hasAppFolder && s.hasSharedFolder && s.domainFolders.length >= 1
-
-const meetsLv7 = (s: ProjectSnapshot): boolean =>
-  meetsLv6(s) && s.crossFolders.length >= 1
-
-const meetsLv8 = (s: ProjectSnapshot): boolean => meetsLv7(s) && s.hasSharedEvents
-
-const meetsLv9 = (s: ProjectSnapshot): boolean =>
-  meetsLv8(s) && s.hasInfrastructureFolder && s.domainFolders.some((d) => d.hasPorts)
-
-const meetsLv10 = (s: ProjectSnapshot): boolean =>
-  meetsLv9(s) && s.domainFolders.some((d) => d.hasCommand && d.hasQuery)
-
-const missingForLv2 = (s: ProjectSnapshot): readonly string[] => {
-  const missing: string[] = []
-  if (!s.hasWorkflow) missing.push("workflow.ts")
-  if (!s.hasMiddleware) missing.push("middleware.ts")
-  return missing
+/**
+ * How each requirement label in LEVEL_DEFINITIONS (requiredFilesForNext / requiredFoldersForNext)
+ * is checked against the snapshot. A label without an entry here is never satisfied,
+ * and a unit test checks that every label in the shared package has one.
+ */
+export const REQUIREMENT_CHECKS: Readonly<Record<string, Requirement>> = {
+  "workflow.ts": (s) => s.hasWorkflow,
+  "middleware.ts": (s) => s.hasMiddleware,
+  "parse.ts": (s) => s.hasParse,
+  "store.ts": (s) => s.hasStore,
+  "client.ts": (s) => s.hasClient,
+  "logic.ts or logic/ folder": (s) => s.hasLogic,
+  "app/": (s) => s.hasAppFolder,
+  "shared/": (s) => s.hasSharedFolder,
+  "domains/<name>/": (s) => s.domainFolders.length >= 1,
+  "orchestrate/<name>/": (s) => s.orchestrateFolders.length >= 1,
+  "shared/events.ts": (s) => s.hasSharedEvents,
+  "ports.ts in domain folder": (s) => s.domainFolders.some((d) => d.hasPorts),
+  "infrastructure/": (s) => s.hasInfrastructureFolder,
+  "command/ and query/ in domain folder": (s) =>
+    s.domainFolders.some((d) => d.hasCommand && d.hasQuery),
 }
 
-const missingForLv3 = (s: ProjectSnapshot): readonly string[] =>
-  s.hasParse ? [] : ["parse.ts"]
+/**
+ * Lv1–5 keep every layer file flat in the source root. From Lv6 the files move into
+ * app/, shared/ and domains/, so the domain structure is checked on its own and
+ * the flat Lv1–5 files are not required any more.
+ */
+const DOMAIN_STRUCTURE_LEVEL: ArchitectureLevel = 6
 
-const missingForLv4 = (s: ProjectSnapshot): readonly string[] => {
-  const missing: string[] = []
-  if (!s.hasRepository) missing.push("repository.ts")
-  if (!s.hasClient) missing.push("client.ts")
-  return missing
+const requirementsForNext = (level: ArchitectureLevel): readonly string[] => {
+  const def = getLevelDefinition(level)
+  return [...def.requiredFilesForNext, ...def.requiredFoldersForNext]
 }
 
-const missingForLv5 = (s: ProjectSnapshot): readonly string[] =>
-  s.hasLogic ? [] : ["logic.ts or logic/ folder"]
+const isSatisfied = (label: string, snapshot: ProjectSnapshot): boolean =>
+  REQUIREMENT_CHECKS[label]?.(snapshot) ?? false
 
-const missingForLv6 = (s: ProjectSnapshot): readonly string[] => {
-  const missing: string[] = []
-  if (!s.hasAppFolder) missing.push("app/ folder")
-  if (!s.hasSharedFolder) missing.push("shared/ folder")
-  if (s.domainFolders.length === 0) missing.push("at least one domain folder (e.g. domainUser/)")
-  return missing
-}
+const missingRequirements = (level: ArchitectureLevel, snapshot: ProjectSnapshot): readonly string[] =>
+  requirementsForNext(level).filter((label) => !isSatisfied(label, snapshot))
 
-const missingForLv7 = (s: ProjectSnapshot): readonly string[] =>
-  s.crossFolders.length >= 1 ? [] : ["a cross- prefixed folder (e.g. cross-auth/)"]
+const previousLevel = (level: ArchitectureLevel): ArchitectureLevel =>
+  (level - 1) as ArchitectureLevel
 
-const missingForLv8 = (s: ProjectSnapshot): readonly string[] =>
-  s.hasSharedEvents ? [] : ["shared/events.ts"]
+/** The highest level reached by climbing from `start` while each next level's requirements are met */
+const climb = (start: ArchitectureLevel, snapshot: ProjectSnapshot): ArchitectureLevel =>
+  LEVEL_DEFINITIONS.filter((d) => d.level > start).reduce<ArchitectureLevel>(
+    (reached, def) =>
+      reached === previousLevel(def.level) && missingRequirements(reached, snapshot).length === 0
+        ? def.level
+        : reached,
+    start,
+  )
 
-const missingForLv9 = (s: ProjectSnapshot): readonly string[] => {
-  const missing: string[] = []
-  if (!s.hasInfrastructureFolder) missing.push("infrastructure/ folder")
-  if (!s.domainFolders.some((d) => d.hasPorts)) missing.push("ports.ts in at least one domain folder")
-  return missing
-}
+const evidenceFrom = (start: ArchitectureLevel, reached: ArchitectureLevel): readonly string[] =>
+  LEVEL_DEFINITIONS.filter((d) => d.level >= start && d.level <= reached).map((d) => d.evidenceLabel)
 
-const missingForLv10 = (s: ProjectSnapshot): readonly string[] =>
-  s.domainFolders.some((d) => d.hasCommand && d.hasQuery)
-    ? []
-    : ["command/ and query/ subfolders in at least one domain folder"]
+const hasDomainStructure = (snapshot: ProjectSnapshot): boolean =>
+  missingRequirements(previousLevel(DOMAIN_STRUCTURE_LEVEL), snapshot).length === 0
 
-type LevelCheck = {
-  readonly level: ArchitectureLevel
-  readonly meets: (s: ProjectSnapshot) => boolean
-  readonly missingForNext: (s: ProjectSnapshot) => readonly string[]
-}
-
-const LEVEL_CHECKS: readonly LevelCheck[] = [
-  { level: 1, meets: meetsLv1, missingForNext: missingForLv2 },
-  { level: 2, meets: meetsLv2, missingForNext: missingForLv3 },
-  { level: 3, meets: meetsLv3, missingForNext: missingForLv4 },
-  { level: 4, meets: meetsLv4, missingForNext: missingForLv5 },
-  { level: 5, meets: meetsLv5, missingForNext: missingForLv6 },
-  { level: 6, meets: meetsLv6, missingForNext: missingForLv7 },
-  { level: 7, meets: meetsLv7, missingForNext: missingForLv8 },
-  { level: 8, meets: meetsLv8, missingForNext: missingForLv9 },
-  { level: 9, meets: meetsLv9, missingForNext: missingForLv10 },
-  { level: 10, meets: meetsLv10, missingForNext: () => [] },
-] as const
-
-const EVIDENCE_LABELS: Readonly<Record<ArchitectureLevel, string>> = {
-  1: "route.ts",
-  2: "workflow.ts, middleware.ts",
-  3: "parse.ts",
-  4: "repository.ts, client.ts",
-  5: "logic.ts or logic/",
-  6: "app/, shared/, domain folder",
-  7: "cross- prefixed folder",
-  8: "shared/events.ts",
-  9: "infrastructure/, ports.ts in domain",
-  10: "command/ and query/ in domain",
+const detectFrom = (start: ArchitectureLevel, snapshot: ProjectSnapshot): LevelResult => {
+  const reached = climb(start, snapshot)
+  return {
+    level: reached,
+    evidence: evidenceFrom(start, reached),
+    missingForNext: missingRequirements(reached, snapshot),
+  }
 }
 
 export const detectLevel = (snapshot: ProjectSnapshot): LevelResult => {
-  let reached: ArchitectureLevel = 1
-
-  for (const check of LEVEL_CHECKS) {
-    if (check.meets(snapshot)) {
-      reached = check.level
-    } else {
-      break
-    }
-  }
-
-  const evidence: string[] = []
-  for (const check of LEVEL_CHECKS) {
-    if (check.level > reached) break
-    evidence.push(EVIDENCE_LABELS[check.level])
-  }
-
-  const currentCheck = LEVEL_CHECKS.find((c) => c.level === reached)
-  const missingForNext = currentCheck ? currentCheck.missingForNext(snapshot) : []
-
-  return { level: reached, evidence, missingForNext }
+  if (hasDomainStructure(snapshot)) return detectFrom(DOMAIN_STRUCTURE_LEVEL, snapshot)
+  if (snapshot.hasRoute) return detectFrom(1, snapshot)
+  return { level: null, evidence: [], missingForNext: [LAYER_FILES.ROUTE] }
 }

@@ -19,9 +19,9 @@ const ORM_PACKAGES = [
 const isOrmImport = (specifier: string): boolean =>
   (ORM_PACKAGES as readonly string[]).includes(specifier)
 
-const isRepositoryImport = (specifier: string): boolean => {
+const isStoreImport = (specifier: string): boolean => {
   const normalized = specifier.replace(/\.(js|ts)$/, "")
-  return normalized.split("/").at(-1) === "repository"
+  return normalized.split("/").at(-1) === "store"
 }
 
 const checkParseDbAccess = (
@@ -31,7 +31,7 @@ const checkParseDbAccess = (
   const violations = sourceFile
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue())
-    .filter((spec) => isOrmImport(spec) || isRepositoryImport(spec))
+    .filter((spec) => isOrmImport(spec) || isStoreImport(spec))
 
   return violations.map((spec) => ({
     ruleId: RULE_ID,
@@ -39,7 +39,7 @@ const checkParseDbAccess = (
     message: `parse.ts imports "${spec}" — Parse layer must not access the database`,
     location: { filePath },
     suggestion:
-      "Move DB calls to repository.ts and pass the resolved data into parse functions as arguments.",
+      "Move DB calls to store.ts and pass the resolved data into parse functions as arguments.",
   }))
 }
 

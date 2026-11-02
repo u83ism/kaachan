@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { generateRulesContent, outputPathForTarget, ALL_TARGETS } from "../../src/cli/export-rules.js"
-import type { AnalysisResult } from "../../src/types/config.js"
+import type { DetectedAnalysisResult } from "../../src/types/config.js"
 import type { FatThresholds } from "../../src/types/config.js"
 
 const defaultThresholds: FatThresholds = {
@@ -10,7 +10,7 @@ const defaultThresholds: FatThresholds = {
   errorLogicFolderLines: 300,
 }
 
-const makeResult = (overrides?: Partial<AnalysisResult>): AnalysisResult => ({
+const makeResult = (overrides?: Partial<DetectedAnalysisResult>): DetectedAnalysisResult => ({
   level: 5,
   levelEvidence: ["logic.ts"],
   missingForNext: ["app/ folder", "shared/ folder"],
@@ -59,7 +59,7 @@ describe("generateRulesContent", () => {
   it("includes level-specific constraints for Lv6", () => {
     const result = makeResult({ level: 6, levelEvidence: ["app/", "shared/", "domain folder"] })
     const content = generateRulesContent(result, defaultThresholds)
-    expect(content).toContain("domainXxx/")
+    expect(content).toContain("domains/<name>/")
     expect(content).toContain("routes.ts")
   })
 

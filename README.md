@@ -8,7 +8,7 @@ This project is split across two repositories:
 
 | Repository | Role |
 |---|---|
-| [`u83ism/kaachan-and-slime-docs`](https://github.com/u83ism/kaachan-and-slime-docs) | **Theory** — Slime Architecture concept, design rationale, ADRs. Source of truth for the "what and why". |
+| [`u83ism/slime-architecture-rules`](https://github.com/u83ism/slime-architecture-rules) | **Theory and shared package** — Slime Architecture concept, design rationale, ADRs (`docs/ja/`), plus the `@u83ism/architecture-rules` package (rule catalog, level definitions, AI rules templates). Source of truth for the "what and why". |
 | `u83ism/kaachan` (this repo) | **Implementation** — The actual Kaachan linter codebase and its development plan. |
 
 `docs/` in this repository contains implementation-oriented summaries and development plans derived from the theory. It is not a raw copy of the theory docs — it reflects what the specifications mean for this codebase.
@@ -55,20 +55,22 @@ npx kaachan --disable-rule fat-workflow  # skip a specific rule
 
 ## Architecture Level Detection
 
-Kaachan infers the current level from file-system signals (no AST required):
+Kaachan infers the current level from file-system signals (no AST required). The labels and requirements come from `LEVEL_DEFINITIONS` in `@u83ism/architecture-rules`:
 
 | Level | Required signals |
 |---|---|
 | Lv1 | `route.ts` |
 | Lv2 | + `workflow.ts` + `middleware.ts` |
 | Lv3 | + `parse.ts` |
-| Lv4 | + `repository.ts` + `client.ts` |
+| Lv4 | + `store.ts` + `client.ts` |
 | Lv5 | + `logic.ts` or `logic/` folder |
-| Lv6 | + `app/` + `shared/` + ≥1 domain folder (`/^domain[A-Z]/`) |
-| Lv7 | + any `cross-` prefixed folder |
+| Lv6 | `app/` + `shared/` + ≥1 folder under `domains/` |
+| Lv7 | + ≥1 folder under `orchestrate/` |
 | Lv8 | + `shared/events.ts` |
 | Lv9 | + `infrastructure/` + any domain has `ports.ts` |
-| Lv10 | + any domain has `command/` AND `query/` subfolders |
+| Lv10 | + any domain has `command/` AND `query/` subfolders (`ports.ts` may live in them) |
+
+Lv1–5 keep the layer files flat in the source root. From Lv6 they move into `app/`, `shared/` and `domains/`, so the domain structure is detected on its own without the flat Lv1–5 files. A project with neither `route.ts` nor a domain structure is reported as "No Slime Architecture level detected", and no rules run.
 
 Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 
@@ -81,20 +83,20 @@ Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 | `fat-workflow` | Lv2 | `workflow.ts` exceeding line/function thresholds | warning |
 | `route-inline` | Lv2 | Inline handlers in `route.ts`; auth library imports in `workflow.ts` | warning |
 | `fat-parse` | Lv3 | `parse.ts` exceeding line/function thresholds | warning |
-| `parse-violations` | Lv3 | `parse.ts` importing ORM/repository; `workflow.ts` calling `JSON.parse()` directly | error |
-| `repo-naming` | Lv4 | Non-conventional repository function names; `workflow.ts` importing ORM directly | warning |
-| `repo-orm-leak` | Lv4 | `repository.ts` returning ORM types; `workflow.ts` calling ORM transaction API | warning |
+| `parse-violations` | Lv3 | `parse.ts` importing ORM/store; `workflow.ts` calling `JSON.parse()` directly | error |
+| `repo-naming` | Lv4 | Non-conventional store function names; `workflow.ts` importing ORM directly | warning |
+| `repo-advanced` | Lv4 | `store.ts` returning ORM types; `workflow.ts` calling ORM transaction API | warning |
 | `fat-logic` | Lv5 | `logic.ts` exceeding thresholds; domain prefix mixing; non-intersecting type groups | error |
-| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `repository` or `client` | error |
+| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `store` or `client` | error |
 | `logic-throws` | Lv5 | `throw` statements inside `logic.ts` / `logic/*.ts` | error |
 | `logic-tests` | Lv5–6 (warn) / Lv7+ (error) | Missing test files for `logic.ts` / `logic/*.ts` | error |
 | `dep-direction` | Lv6 | Cross-domain imports; domain referenced from outside `app/`; `shared/` importing domain | error |
-| `app-layer` | Lv6–7 | `app/repository.ts`, `app/client.ts`, `app/logic.ts` presence; `cross-*/app/` imports | error |
+| `app-layer` | Lv6–7 | `app/store.ts`, `app/client.ts`, `app/logic.ts` presence; `orchestrate/*` importing `app/` | error |
 | `client-acl` | Lv6 | `client.ts` accessed from outside `adapter.ts` in same `client/` folder | warning |
 | `fat-routing` | Lv6 | `app/route.ts` size; route definitions in `app/route.ts`; dead or unreachable routes | warning |
 | `nested-domain` | Lv7 | Nested subdomain paths imported from outside their parent domain | error |
 | `events-validation` | Lv8 | `shared/events.ts` types with class properties or missing `type` discriminant | error |
-| `cross-folder-concerns` | Lv8 | `cross-*` folders importing external service packages | warning |
+| `cross-folder-concerns` | Lv8 | `orchestrate/*` folders importing external service packages | warning |
 | `infrastructure-boundary` | Lv9 | ORM imports outside `infrastructure/`; workflows ignoring ports | error |
 | `cqrs-enforcement` | Lv10 | `command/` importing `query/`; query bloat; shared query helpers; query importing logic | error |
 

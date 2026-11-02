@@ -1,12 +1,11 @@
-import { join } from "node:path"
 import type { Diagnostic } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
 const RULE_ID = "cross-folder-concerns"
 
 /**
- * External service packages that should not be imported from cross- folders.
- * cross- folders are for transaction orchestration only.
+ * External service packages that should not be imported from orchestrate/ folders.
+ * orchestrate/ folders are for transaction orchestration only.
  */
 const EXTERNAL_SERVICE_PACKAGES: readonly string[] = [
   "nodemailer",
@@ -45,16 +44,16 @@ export const crossFolderConcernsRule: Rule = {
   id: RULE_ID,
   activateFromLevel: 8,
   check(context: RuleContext): readonly Diagnostic[] {
-    if (context.snapshot.crossFolders.length === 0) return []
+    if (context.snapshot.orchestrateFolders.length === 0) return []
 
-    const { sourceRoot, crossFolders, sourceFiles } = context.snapshot
+    const { orchestrateFolders, sourceFiles } = context.snapshot
     const diagnostics: Diagnostic[] = []
 
-    for (const cross of crossFolders) {
-      const crossDir = join(sourceRoot, cross)
+    for (const coordinator of orchestrateFolders) {
+      const coordinatorDir = coordinator.absolutePath
 
       for (const fileInfo of sourceFiles) {
-        if (!isInsideDir(fileInfo.absolutePath, crossDir)) continue
+        if (!isInsideDir(fileInfo.absolutePath, coordinatorDir)) continue
 
         const sf =
           context.morphProject.getSourceFile(fileInfo.absolutePath) ??
@@ -67,10 +66,10 @@ export const crossFolderConcernsRule: Rule = {
           diagnostics.push({
             ruleId: RULE_ID,
             severity: "warning",
-            message: `${cross}/ imports external service package "${specifier}" — cross- folders are for transaction orchestration only`,
+            message: `orchestrate/${coordinator.name}/ imports external service package "${specifier}" — orchestrate/ folders are for transaction orchestration only`,
             location: { filePath: fileInfo.absolutePath },
             suggestion:
-              "Move external API calls to domain events + adapter pattern instead of calling them directly from cross- folders.",
+              "Move external API calls to domain events + adapter pattern instead of calling them directly from orchestrate/ folders.",
           })
         }
       }

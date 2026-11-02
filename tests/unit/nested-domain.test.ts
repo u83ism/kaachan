@@ -31,9 +31,9 @@ describe("nested-domain rule — parent→child isolation", () => {
       (d) => d.ruleId === "nested-domain" && d.severity === "error",
     )
     expect(errors.length).toBeGreaterThanOrEqual(1)
-    // app/service.ts importing domainUser/core/utils.ts should be flagged
+    // app/service.ts importing domains/user/core/utils.ts should be flagged
     expect(errors.some((d) => d.location.filePath.includes("app"))).toBe(true)
-    expect(errors.some((d) => d.message.includes("domainUser"))).toBe(true)
+    expect(errors.some((d) => d.message.includes("domains/user/core"))).toBe(true)
   })
 
   it("does not flag domain importing its own nested subdomain", async () => {
@@ -42,9 +42,9 @@ describe("nested-domain rule — parent→child isolation", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter((d) => d.ruleId === "nested-domain")
-    // domainUser/workflow.ts imports domainUser/core/utils.ts — must NOT be flagged
+    // domains/user/workflow.ts imports domains/user/core/utils.ts — must NOT be flagged
     expect(
-      errors.every((d) => !d.location.filePath.includes("domainUser/workflow")),
+      errors.every((d) => !/domains[\\/]user[\\/]workflow/.test(d.location.filePath)),
     ).toBe(true)
   })
 
@@ -60,7 +60,7 @@ describe("nested-domain rule — parent→child isolation", () => {
 })
 
 describe("nested-domain rule — activation", () => {
-  it("does not activate at Lv6 (no cross- folder)", async () => {
+  it("does not activate at Lv6 (no orchestrate/ folder)", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv6")))
     expect(result.ok).toBe(true)
     if (!result.ok) return

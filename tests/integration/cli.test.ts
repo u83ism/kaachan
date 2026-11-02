@@ -25,6 +25,18 @@ const runCli = (args: readonly string[]): CliResult => {
 }
 
 describe("CLI — level detection", () => {
+  it("reports that no level was detected and exits 0", () => {
+    const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "no-level"), "--level"])
+    expect(exitCode).toBe(0)
+    expect(stdout).toContain("No Slime Architecture level detected")
+  })
+
+  it("export:rules exits 1 when no level was detected", () => {
+    const { stderr, exitCode } = runCli(["export:rules", resolve(FIXTURES_DIR, "no-level")])
+    expect(exitCode).toBe(1)
+    expect(stderr).toContain("no Slime Architecture level detected")
+  })
+
   it("detects Lv1 for lv1 fixture", () => {
     const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "lv1"), "--level"])
     expect(exitCode).toBe(0)

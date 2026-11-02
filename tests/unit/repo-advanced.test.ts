@@ -21,7 +21,7 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
   ...overrides,
 })
 
-describe("repo-advanced rule — repository ORM type leak", () => {
+describe("repo-advanced rule — store ORM type leak", () => {
   it("emits warning for each exported function whose return type annotation includes an ORM type", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4-orm-violations")))
     expect(result.ok).toBe(true)
@@ -45,7 +45,7 @@ describe("repo-advanced rule — repository ORM type leak", () => {
     expect(warning?.message).toContain("User")
   })
 
-  it("emits no ORM-leak warning when repository.ts has no ORM imports", async () => {
+  it("emits no ORM-leak warning when store.ts has no ORM imports", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -56,7 +56,7 @@ describe("repo-advanced rule — repository ORM type leak", () => {
     expect(warnings).toHaveLength(0)
   })
 
-  it("does not activate at Lv3 (no repository.ts)", async () => {
+  it("does not activate at Lv3 (no store.ts)", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv3")))
     expect(result.ok).toBe(true)
     if (!result.ok) return

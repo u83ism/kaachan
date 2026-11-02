@@ -73,12 +73,12 @@ const getReturnTypeText = (fn: ExportedFn): string | undefined => {
   return undefined
 }
 
-// --- Check 1: ORM type leaking through repository.ts return types ---
+// --- Check 1: ORM type leaking through store.ts return types ---
 
 const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
-  if (!context.snapshot.hasRepository) return []
+  if (!context.snapshot.hasStore) return []
 
-  const filePath = join(context.snapshot.sourceRoot, "repository.ts")
+  const filePath = join(context.snapshot.sourceRoot, "store.ts")
   const sourceFile =
     context.morphProject.getSourceFile(filePath) ??
     context.morphProject.addSourceFileAtPath(filePath)
@@ -98,10 +98,10 @@ const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
     diagnostics.push({
       ruleId: RULE_ID,
       severity: "warning",
-      message: `repository.ts exposes ORM type in return annotation (${leakedTypes.join(", ")}) — return a plain domain type instead`,
+      message: `store.ts exposes ORM type in return annotation (${leakedTypes.join(", ")}) — return a plain domain type instead`,
       location: { filePath, line: fn.getStartLineNumber() },
       suggestion:
-        "Map the ORM record to a plain domain object before returning. ORM types must not cross the repository boundary.",
+        "Map the ORM record to a plain domain object before returning. ORM types must not cross the store boundary.",
     })
   }
 

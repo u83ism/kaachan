@@ -1,4 +1,4 @@
-// Bad: imports ORM directly in workflow instead of going through repository.ts
+// Bad: imports ORM directly in workflow instead of going through store.ts
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()

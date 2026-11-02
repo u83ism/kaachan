@@ -117,15 +117,24 @@ Cascade — each level requires all previous signals:
 | Lv1 | `route.ts` exists |
 | Lv2 | + `workflow.ts` + `middleware.ts` |
 | Lv3 | + `parse.ts` |
-| Lv4 | + `repository.ts` + `client.ts` |
+| Lv4 | + `store.ts` + `client.ts` |
 | Lv5 | + `logic.ts` or `logic/` folder |
-| Lv6 | + `app/` + `shared/` + ≥1 domain folder (`/^domain[A-Z]/`) |
-| Lv7 | + any `cross-` prefixed folder |
+| Lv6 | `app/` + `shared/` + ≥1 folder under `domains/` (e.g. `domains/user/`) |
+| Lv7 | + ≥1 folder under `orchestrate/` (e.g. `orchestrate/order-inventory/`) |
 | Lv8 | + `shared/events.ts` |
 | Lv9 | + `infrastructure/` + any domain has `ports.ts` |
-| Lv10 | + any domain has `command/` AND `query/` subfolders |
+| Lv10 | + any domain has `command/` AND `query/` subfolders (`query/` holds one query per file; `ports.ts` may live in `command/` / `query/`) |
 
 Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently (same level).
+
+The labels and requirements come from `LEVEL_DEFINITIONS` in `@u83ism/architecture-rules` 0.2.0; `src/level/detector.ts` only maps each requirement label to a snapshot check (`REQUIREMENT_CHECKS`, with a test that every label has one).
+
+Two starting points:
+
+- Lv1–5 (flat): climb from Lv1 while the flat files in the source root meet each next level's requirements
+- Lv6+ (domain structure): when `app/` + `shared/` + `domains/<name>/` exist, start at Lv6 and climb from there. The flat Lv1–5 files are not required, because from Lv6 they live in `app/`, `shared/` and `domains/`
+
+With neither `route.ts` nor a domain structure, the level is `null` ("No Slime Architecture level detected"), no rules run, and `export:rules` exits 1.
 
 ---
 
@@ -205,7 +214,7 @@ Exported: `analyze`, `scanProject`, `detectLevel`, `getRulesForLevel`, `register
   "main": "./dist/core/index.js",
   "bin": { "kaachan": "./dist/cli/index.js" },
   "dependencies": {
-    "@u83ism/architecture-rules": "^0.1.0",
+    "@u83ism/architecture-rules": "file:../slime-architecture-rules",
     "commander": "^12.0.0",
     "ts-morph": "^23.0.0",
     "typescript": "^5.4.0"
@@ -219,7 +228,9 @@ Exported: `analyze`, `scanProject`, `detectLevel`, `getRulesForLevel`, `register
 
 `typescript` is a runtime dependency (ts-morph requires it at runtime to parse target projects).
 
-`@u83ism/architecture-rules` is the shared package that provides `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, and related types/constants. Kaachan imports from it rather than defining these locally.
+`@u83ism/architecture-rules` is the shared package that provides `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, `RULE_CATALOG`, and related types/constants. Kaachan imports from it rather than defining these locally.
+
+The package is consumed via `file:` from the sibling `slime-architecture-rules` checkout (npm installs it as a symlink), so unpublished changes are picked up without an npm release. Its `main` points to `dist/`, which is gitignored there: run `npm run build` in `slime-architecture-rules` after changing it.
 
 ---
 
@@ -677,6 +688,113 @@ kaachan export:rules [path]           # analyze path and write rules files there
 
 ---
 
+## Phase 26+ — Catch-up with `@u83ism/architecture-rules` 0.2.0
+
+Inventory taken 2026-10-25. Kaachan was built against 0.1.0 (published on npm). The shared package has since moved on (18 commits after the last `sync-docs` checkpoint `95f0734`), most notably:
+
+- `bb6f300` — `cross-` folders became coordinators under `orchestrate/`; domain-to-domain dependencies are now declared as a DAG in `slime.config.ts`
+- `f146689` — severities moved into `RULE_CATALOG` (`src/rules-catalog.ts`), the single source of truth (72 rules)
+- `b0a7498` — domains moved under a `domains/` parent folder (`domains/user/`), coordinators under `orchestrate/` (`orchestrate/order-inventory/`)
+- `repository.ts` was renamed to `store.ts`
+
+Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits). Additions reflected in the phases below:
+
+- `7220d10` / `2cc023f` / `50f74a8` — store read functions are limited to four shapes (`find*ByIds` returning a `Map`, unique-key lookups, `list*(filter, page)`, `search*(query, page)`); new rules `store-orm-param`, `store-generic-filter`, `store-call-in-loop`; `search*` added to `store-naming`
+- `8569049` / `4216d45` — table ownership per domain (`tables` in `slime.config.ts`, `TableOwnership` type); new rules `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared`. Ownership starts from writes: cross-domain reads are a hint in Lv6–9 and a warning in Lv10, where `query/` read-side adapters may JOIN across domains
+- `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
+- The catalog now has 79 rules
+
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass.
+
+The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
+
+Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors on `main` — 24 in `tests/fixtures/` (fixtures are type-checked although they import packages that are not installed or omit `.js` extensions) and 3 in `tests/unit/type-dependency-graph.test.ts` (`.sort()` on `readonly string[]`).
+
+### Phase 26 — Scanner: current folder structure ✅
+
+- Recognize domains as the folders directly under `domains/`, coordinators as the folders directly under `orchestrate/` (`FOLDER_NAMES.DOMAINS`, `FOLDER_NAMES.ORCHESTRATE`). Non-kebab-case names are still recognized, so that `folder-name-not-kebab-case` (Phase 30) can report them
+- `hasRepository` → `hasStore` (`LAYER_FILES.STORE`); `crossFolders` → `orchestrateFolders` (name + absolute path)
+- Collect the paths of each layer file wherever it lives (`snapshot.layerFiles`): the source root, `app/`, `shared/`, each domain and its `command/` / `query/`, and each coordinator; `logic/` and `parse/` folders included (store, workflow, parse, logic). Rules currently hard-code `join(sourceRoot, "repository.ts")` etc., so from Lv6 they find nothing — e.g. the Lv6 error escalation of `store-naming` / `store-orm-return-type` would never fire. Rules switch to these lists in Phase 28
+- Level detection reads `LEVEL_DEFINITIONS` (`getLevelDefinition`) for evidence labels and the files/folders missing for the next level, instead of duplicating them in `src/level/detector.ts`
+- A project without `route.ts` was reported as Lv1 (the detector started from 1). It now reports that no level was detected (`level: null`)
+- The Lv6+ domain structure is detected without the flat Lv1–5 files (see Level Detection Algorithm), and `ports.ts` in `command/` / `query/` counts for Lv9/Lv10
+- Mechanical renames in the rules so they keep working on the new layout: `repository.ts` → `store.ts`, `cross-*` → `orchestrate/*`, domain names in messages as `domains/<name>/`. Rule IDs, severities and levels are unchanged (Phase 27/28)
+- Rebuilt the fixtures on the new layout and added `no-level/`, `lv6-domains-only/` and `lv10-cqrs-ports/`
+
+### Phase 27 — Rule IDs and severities from `RULE_CATALOG`
+
+- Each diagnostic uses the catalog rule ID (e.g. `logic-size-hint`), not the module-level ID (`fat-logic`). Modules may keep emitting several catalog IDs
+- Severity comes from `getRuleSeverity(rule, level)`; remove hard-coded severities. A diagnostic whose rule is inactive at the current level is not emitted
+- Remove checks that the catalog no longer has:
+  - `nested-domain` — absorbed into the domain DAG
+  - `dep-direction`: "file outside `app/` imports from a domain" — replaced by the DAG
+  - `fat-routing`: the `app/route.ts` growth hint — the catalog only has `app-route-size` (warning)
+
+### Phase 28 — Fix the 10 rules that drift from the catalog
+
+| Catalog rule | Current Kaachan behavior | Change |
+|---|---|---|
+| `route-handler-non-http` | `route-inline` forbids inline handlers (warning from Lv2) | Thin handlers doing HTTP I/O only are allowed; flag handlers calling store/logic/DB. hint Lv2 → warning Lv3 |
+| `workflow-throws-plain-error` | Active from Lv5; the message always says "use Result err" | Active from Lv3; the message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
+| `logic-store-client-import` | `logic-imports` flags only specifiers whose last segment is `repository` or `client` | Flag `store`, `client` and DB/ORM module imports (same ORM package list as the other rules) |
+| `slime-config-missing` | Active from Lv5 | Active from Lv3 |
+| `workflow-orm-import` | warning | error |
+| `store-naming` | Always hint (checks the root `store.ts` only) | hint Lv4 → error Lv6 (the prefix list already matches the catalog, including `search*`) |
+| `store-orm-return-type` | Always warning (checks the root `store.ts` only) | warning Lv4 → error Lv6 |
+| `domain-undeclared-import` | Any domain-to-domain import is an error | Allowed when declared in `slime.config.ts` (needs Phase 29) |
+| `client-direct-import` | warning | error |
+| `app-owns-logic` | `app/logic.ts` is an error from Lv7, nothing at Lv6 | warning Lv6 → error Lv7 |
+
+All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read the layer file lists collected in Phase 26 instead of fixed root paths, so they keep working after the Lv6 domain split. New rules in Phase 30 do the same.
+
+### Phase 29 — Read the domain DAG and table ownership from `slime.config.ts`
+
+- Read the `domains` declaration (`DomainDependencies` type from the shared package). Kaachan currently only checks that the file exists (`slime-config-hint`)
+- Read the `tables` declaration (`TableOwnership`): domain folder name → owned tables, written as the ORM model names that appear in code
+- Prerequisite for `domain-undeclared-import` (Phase 28), `domain-dependency-cycle` and the `table-*` rules (Phase 30)
+
+### Phase 30 — Unimplemented catalog rules (37)
+
+Implement in level order. Severities come from the catalog (Phase 27).
+
+- Lv2–5: `route-api-namespace`, `workflow-http-access`, `workflow-calls-parse`, `store-orm-param`, `store-generic-filter`, `store-call-in-loop`, `logic-missing-prefix`, `workflow-throws-domain-error`
+- Lv6: `folder-name-not-kebab-case`, `domain-dependency-cycle`, `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared`, `error-code-missing-prefix`, `shared-side-effects`, `shared-size`, `app-size`, `route-sunset-passed`, `domain-pair-coordinated`, `domain-folder-thin`
+- Lv7–8: `domain-imports-orchestrate`, `orchestrate-imports-orchestrate`, `defer-suggestion`, `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake`, `orchestrate-without-transaction`
+- Lv9–10: `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains`, `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file`
+
+Open thresholds for the two merge/re-cut hints (the catalog states them without numbers):
+
+- `domain-pair-coordinated` — how many co-occurrences of the same domain pair in `app/` or `orchestrate/` count as "repeatedly"
+- `domain-folder-thin` — what "very little in it" means (line count, number of layer files, or both)
+
+Detection notes for the store and table rules:
+
+- `store-orm-param` — the same ORM type detection as `store-orm-return-type`, applied to parameter types (ORM `where` input types, query builders)
+- `store-generic-filter` — flag filter/query types whose field-name or operator properties are typed as `string` instead of a union of literals
+- `store-call-in-loop` — a call to a store function inside `for` / `for...of` / `while` or a callback passed to `forEach` / `map` / etc. Hint only: the loop count is unknown statically, and actual N+1 detection belongs to Slime FW runtime metrics
+- `table-*` — tables are identified by ORM model names in store code (e.g. `prisma.user.*` → `user`); writes vs. reads are told apart by the ORM method name. Lv10 `query/` read-side adapters are exempt from `table-foreign-read`, and from Lv9 the rules apply to `infrastructure/<domain>/` adapters instead of `store.ts`
+- Lv10 structure detection must expect one query per file under `query/` (`userList.ts`), not `query/workflow.ts`
+
+Not in the catalog yet (proposals in the theory repository, do not implement until they land in `RULE_CATALOG`):
+
+- Capability-gated rules (`requires: Capability[]` on `RuleDefinition`, capabilities detected from code): `queue-*`, `defer-enqueue`, `outbox-outside-transaction` (「非同期・キュー導入 設計方針」) and `job-*` (「Slime FW詳細設計」 — job management)
+
+### Phase 31 — `export:rules` from the shared templates
+
+- Replace the hard-coded `LEVEL_CONSTRAINTS` in `src/cli/export-rules.ts` with the shared templates (`rulesTemplateSpecifier`, `renderRulesForTarget`, `RULES_TARGETS`), so generated rules files carry the same guidance as `rules/_content/lv*.md`
+- Reconcile the target list: Kaachan has `claude` / `cursor` / `cline` / `gemini`; the shared package has `claude` / `codex` / `gemini` / `cursor`
+- Validate `--target` against the target IDs and exit with an error for unknown values (it is currently cast to the type unchecked)
+- Existing files at the destination are overwritten as a whole, as today (decided 2026-11-02; no marker-based partial replacement)
+
+### Phase 32 — Docs sync ✅
+
+- The theory repository was renamed from `kaachan-and-slime-docs` to `slime-architecture-rules`: updated `CLAUDE.md`, `README.md` and `.claude/skills/sync-docs/SKILL.md`
+- Ran `sync-docs` from `95f0734` to `4216d45` (2026-11-02) and updated `overview.md` / `kaachan-design.md`
+
+Order: 26 → 27 → 28 → 29 → 30. Phases 31 and 32 are independent.
+
+---
+
 ## Rule Activation Summary (complete)
 
 | Rule ID | Active from | Phase |
@@ -705,6 +823,8 @@ kaachan export:rules [path]           # analyze path and write rules files there
 | `infrastructure-boundary` | Lv9 | Phase 18 ✅ |
 | `cqrs-enforcement` | Lv10 | Phase 19 ✅ |
 | `export:rules` CLI | — | Phase 25 |
+
+Module-level IDs above are replaced by the 79 catalog rule IDs in Phase 27.
 
 ---
 

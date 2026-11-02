@@ -44,10 +44,10 @@ const getExportedFunctionNames = (sourceFile: SourceFile): readonly string[] => 
   return [...fromDeclarations, ...fromArrows]
 }
 
-const checkRepositoryNaming = (context: RuleContext): readonly Diagnostic[] => {
-  if (!context.snapshot.hasRepository) return []
+const checkStoreNaming = (context: RuleContext): readonly Diagnostic[] => {
+  if (!context.snapshot.hasStore) return []
 
-  const filePath = join(context.snapshot.sourceRoot, "repository.ts")
+  const filePath = join(context.snapshot.sourceRoot, "store.ts")
   const sourceFile =
     context.morphProject.getSourceFile(filePath) ??
     context.morphProject.addSourceFileAtPath(filePath)
@@ -61,7 +61,7 @@ const checkRepositoryNaming = (context: RuleContext): readonly Diagnostic[] => {
   return violations.map((name) => ({
     ruleId: RULE_ID,
     severity: "hint" as const,
-    message: `repository.ts: "${name}" does not follow naming conventions`,
+    message: `store.ts: "${name}" does not follow naming conventions`,
     location: { filePath },
     details: [
       `Read functions: find*, list*, get*, count*, search*`,
@@ -90,9 +90,9 @@ const checkWorkflowOrmImports = (context: RuleContext): readonly Diagnostic[] =>
     {
       ruleId: RULE_ID,
       severity: "warning" as const,
-      message: `workflow.ts imports ORM directly (${ormImports.join(", ")}) — DB access must go through repository.ts`,
+      message: `workflow.ts imports ORM directly (${ormImports.join(", ")}) — DB access must go through store.ts`,
       location: { filePath },
-      suggestion: "Move DB operations to repository.ts and call them from workflow.ts.",
+      suggestion: "Move DB operations to store.ts and call them from workflow.ts.",
     },
   ]
 }
@@ -102,7 +102,7 @@ export const repoNamingRule: Rule = {
   activateFromLevel: 4,
   check(context: RuleContext): readonly Diagnostic[] {
     return [
-      ...checkRepositoryNaming(context),
+      ...checkStoreNaming(context),
       ...checkWorkflowOrmImports(context),
     ]
   },

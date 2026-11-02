@@ -22,7 +22,7 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
 })
 
 describe("logic-imports rule — logic.ts violations", () => {
-  it("emits error when logic.ts imports repository.ts", async () => {
+  it("emits error when logic.ts imports store.ts", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -30,8 +30,8 @@ describe("logic-imports rule — logic.ts violations", () => {
     const errors = result.value.diagnostics.filter(
       (d) => d.ruleId === "logic-imports" && d.severity === "error",
     )
-    const repositoryError = errors.find((d) => d.message.includes("repository"))
-    expect(repositoryError).toBeDefined()
+    const storeError = errors.find((d) => d.message.includes("store"))
+    expect(storeError).toBeDefined()
   })
 
   it("emits error when logic.ts imports client.ts", async () => {
@@ -86,7 +86,7 @@ describe("logic-imports rule — logic.ts violations", () => {
 })
 
 describe("logic-imports rule — logic/ folder violations", () => {
-  it("emits error when logic/*.ts imports repository.ts", async () => {
+  it("emits error when logic/*.ts imports store.ts", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-violations-folder")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
@@ -95,6 +95,6 @@ describe("logic-imports rule — logic/ folder violations", () => {
       (d) => d.ruleId === "logic-imports" && d.severity === "error",
     )
     expect(errors).toHaveLength(1)
-    expect(errors[0]?.message).toContain("repository")
+    expect(errors[0]?.message).toContain("store")
   })
 })

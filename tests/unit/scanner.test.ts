@@ -60,11 +60,11 @@ describe("scanProject", () => {
   })
 
   describe("lv4 fixture", () => {
-    it("detects repository.ts and client.ts", () => {
+    it("detects store.ts and client.ts", () => {
       const result = scanProject(join(fixturesDir, "lv4"))
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.hasRepository).toBe(true)
+      expect(result.value.hasStore).toBe(true)
       expect(result.value.hasClient).toBe(true)
     })
   })
@@ -80,7 +80,7 @@ describe("scanProject", () => {
   })
 
   describe("lv6 fixture", () => {
-    it("detects app/, shared/, and domainUser/", () => {
+    it("detects app/, shared/, and domains/user/", () => {
       const result = scanProject(join(fixturesDir, "lv6"))
       expect(result.ok).toBe(true)
       if (!result.ok) return
@@ -88,7 +88,7 @@ describe("scanProject", () => {
       expect(snap.hasAppFolder).toBe(true)
       expect(snap.hasSharedFolder).toBe(true)
       expect(snap.domainFolders).toHaveLength(1)
-      expect(snap.domainFolders[0]?.name).toBe("domainUser")
+      expect(snap.domainFolders[0]?.name).toBe("user")
     })
 
     it("domain folder has no special substructure", () => {
@@ -101,12 +101,83 @@ describe("scanProject", () => {
       expect(domain?.hasQuery).toBe(false)
     })
 
-    it("has no cross- folders or shared events", () => {
+    it("has no orchestrate/ folders or shared events", () => {
       const result = scanProject(join(fixturesDir, "lv6"))
       expect(result.ok).toBe(true)
       if (!result.ok) return
-      expect(result.value.crossFolders).toHaveLength(0)
+      expect(result.value.orchestrateFolders).toHaveLength(0)
       expect(result.value.hasSharedEvents).toBe(false)
+    })
+  })
+
+  describe("lv10 fixture", () => {
+    it("treats ports.ts in command/ or query/ as the domain's ports", () => {
+      const result = scanProject(join(fixturesDir, "lv10-cqrs-ports"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const domain = result.value.domainFolders[0]
+      expect(domain?.name).toBe("user")
+      expect(domain?.hasPorts).toBe(true)
+      expect(domain?.hasCommand).toBe(true)
+      expect(domain?.hasQuery).toBe(true)
+    })
+
+    it("collects workflow.ts from command/ and coordinators", () => {
+      const result = scanProject(join(fixturesDir, "lv10-cqrs-ports"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const root = join(fixturesDir, "lv10-cqrs-ports")
+      expect(result.value.layerFiles.workflow).toEqual([
+        join(root, "domains", "user", "command", "workflow.ts"),
+        join(root, "orchestrate", "order-inventory", "workflow.ts"),
+      ])
+    })
+  })
+
+  describe("lv7 fixture", () => {
+    it("detects coordinators under orchestrate/", () => {
+      const result = scanProject(join(fixturesDir, "lv7-violations"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const coordinators = result.value.orchestrateFolders
+      expect(coordinators.map((o) => o.name)).toEqual(["order"])
+      expect(coordinators[0]?.absolutePath).toBe(join(fixturesDir, "lv7-violations", "orchestrate", "order"))
+    })
+  })
+
+  describe("layerFiles collection", () => {
+    it("collects flat layer files from the source root", () => {
+      const result = scanProject(join(fixturesDir, "lv5"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const root = join(fixturesDir, "lv5")
+      expect(result.value.layerFiles.store).toEqual([join(root, "store.ts")])
+      expect(result.value.layerFiles.logic).toEqual([join(root, "logic.ts")])
+    })
+
+    it("collects logic/ folder files", () => {
+      const result = scanProject(join(fixturesDir, "lv5-violations-folder"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const logicDir = join(fixturesDir, "lv5-violations-folder", "logic")
+      expect(result.value.layerFiles.logic).toContain(join(logicDir, "user.ts"))
+    })
+
+    it("collects layer files from each domain", () => {
+      const result = scanProject(join(fixturesDir, "lv6-domain-with-routes"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const domainsDir = join(fixturesDir, "lv6-domain-with-routes", "domains")
+      expect(result.value.layerFiles.workflow).toEqual(
+        expect.arrayContaining([join(domainsDir, "order", "workflow.ts"), join(domainsDir, "user", "workflow.ts")]),
+      )
+    })
+
+    it("collects app/store.ts", () => {
+      const result = scanProject(join(fixturesDir, "lv6-app-violations"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.value.layerFiles.store).toContain(join(fixturesDir, "lv6-app-violations", "app", "store.ts"))
     })
   })
 

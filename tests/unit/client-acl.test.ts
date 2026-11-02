@@ -31,7 +31,7 @@ describe("client-acl rule", () => {
       (d) => d.ruleId === "client-acl" && d.severity === "warning",
     )
     expect(warnings).toHaveLength(1)
-    expect(warnings[0]?.location.filePath).toContain("domainUser")
+    expect(warnings[0]?.location.filePath).toMatch(/domains[\\/]user/)
   })
 
   it("does not flag client/adapter.ts importing client/client.ts", async () => {
@@ -40,7 +40,7 @@ describe("client-acl rule", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter((d) => d.ruleId === "client-acl")
-    // Only domainUser/workflow.ts should be flagged, not adapter.ts
+    // Only domains/user/workflow.ts should be flagged, not adapter.ts
     expect(warnings.every((d) => !d.location.filePath.includes("adapter"))).toBe(true)
   })
 

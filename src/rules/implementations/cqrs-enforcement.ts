@@ -48,7 +48,7 @@ const checkCommandQueryImports = (
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "error",
-        message: `${domain.name}/command/ imports from query/ ("${specifier}") — command and query must not cross-reference`,
+        message: `domains/${domain.name}/command/ imports from query/ ("${specifier}") — command and query must not cross-reference`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
           "Use shared ports.ts or shared/ for types needed by both command and query sides.",
@@ -80,7 +80,7 @@ const checkQueryBloat = (
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "hint",
-        message: `${domain.name}/query/ file is growing large (${metrics.value.lineCount} lines) — consider splitting query concerns`,
+        message: `domains/${domain.name}/query/ file is growing large (${metrics.value.lineCount} lines) — consider splitting query concerns`,
         location: { filePath: fileInfo.absolutePath },
         suggestion: "Split into smaller, focused query files (e.g., by use-case or aggregate).",
       })
@@ -138,7 +138,7 @@ const checkQuerySharedAbstraction = (
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "warning",
-        message: `${domain.name}/query/ shared abstraction: a query-internal helper is imported by ${importers.size} query files`,
+        message: `domains/${domain.name}/query/ shared abstraction: a query-internal helper is imported by ${importers.size} query files`,
         location: { filePath: targetBase + ".ts" },
         suggestion:
           "Move shared query helpers to shared/ or expose them via ports.ts to avoid internal query coupling.",
@@ -181,7 +181,7 @@ const checkQueryLogicImports = (
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "warning",
-        message: `${domain.name}/query/ imports domain logic ("${specifier}") — query/ should use ReadPort and read models only`,
+        message: `domains/${domain.name}/query/ imports domain logic ("${specifier}") — query/ should use ReadPort and read models only`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
           "Replace domain logic usage with ReadPort and read model projections in query files.",

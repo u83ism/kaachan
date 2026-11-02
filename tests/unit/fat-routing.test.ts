@@ -63,10 +63,10 @@ describe("fat-routing rule — unreachable workflow candidates", () => {
     const hints = result.value.diagnostics.filter(
       (d) => d.ruleId === "fat-routing" && d.severity === "hint" && d.message.includes("workflow"),
     )
-    // domainUser/workflow.ts is not imported by any route — should be flagged
-    expect(hints.some((d) => d.message.includes("domainUser"))).toBe(true)
-    // domainOrder/workflow.ts is imported by app/route.ts — should NOT be flagged
-    expect(hints.every((d) => !d.message.includes("domainOrder"))).toBe(true)
+    // domains/user/workflow.ts is not imported by any route — should be flagged
+    expect(hints.some((d) => d.message.includes("domains/user/"))).toBe(true)
+    // domains/order/workflow.ts is imported by app/route.ts — should NOT be flagged
+    expect(hints.every((d) => !d.message.includes("domains/order/"))).toBe(true)
   })
 })
 
@@ -113,7 +113,7 @@ describe("fat-routing rule — domain co-location (routes.ts)", () => {
     const hints = result.value.diagnostics.filter(
       (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
     )
-    // both domainOrder and domainUser lack routes.ts
+    // both domains/order and domains/user lack routes.ts
     expect(hints.length).toBeGreaterThanOrEqual(2)
     expect(hints.every((d) => d.severity === "hint")).toBe(true)
   })
@@ -130,7 +130,7 @@ describe("fat-routing rule — domain co-location (routes.ts)", () => {
   })
 
   it("emits no co-location hint for domain folders that have no workflow.ts", async () => {
-    // lv6 fixture has a domain folder (domainUser) with no workflow.ts
+    // lv6 fixture has a domain folder (domains/user) with no workflow.ts
     const result = await analyze(makeConfig(join(fixturesDir, "lv6")))
     expect(result.ok).toBe(true)
     if (!result.ok) return

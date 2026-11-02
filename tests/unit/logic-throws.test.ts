@@ -65,7 +65,7 @@ describe("logic-throws rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    // lv5-violations-folder has logic/user.ts that imports repository (no throw), so 0 expected
+    // lv5-violations-folder has logic/user.ts that imports store (no throw), so 0 expected
     const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-throws")
     expect(diagnostics).toHaveLength(0)
   })

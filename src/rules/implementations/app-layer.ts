@@ -23,16 +23,16 @@ export const appLayerRule: Rule = {
     const appDir = join(sourceRoot, "app")
     const diagnostics: Diagnostic[] = []
 
-    // app/repository.ts: warning at Lv6, error at Lv7+
-    const appRepo = join(appDir, "repository.ts")
-    if (existsSync(appRepo)) {
+    // app/store.ts: warning at Lv6, error at Lv7+
+    const appStore = join(appDir, "store.ts")
+    if (existsSync(appStore)) {
       const severity = context.level >= 7 ? "error" : "warning"
       diagnostics.push({
         ruleId: RULE_ID,
         severity,
-        message: `app/repository.ts exists — App layer must not own DB access`,
-        location: { filePath: appRepo },
-        suggestion: "Move DB access to a domain repository or shared/repository.ts.",
+        message: `app/store.ts exists — App layer must not own DB access`,
+        location: { filePath: appStore },
+        suggestion: "Move DB access to a domain store.ts or shared/store.ts.",
       })
     }
 
@@ -60,11 +60,11 @@ export const appLayerRule: Rule = {
         })
       }
 
-      // cross-*/app/ imports: cross- folders must not depend on the App layer
-      for (const cross of context.snapshot.crossFolders) {
-        const crossDir = join(sourceRoot, cross)
+      // orchestrate/*/ importing app/: coordinators must not depend on the App layer
+      for (const coordinator of context.snapshot.orchestrateFolders) {
+        const coordinatorDir = coordinator.absolutePath
         for (const fileInfo of context.snapshot.sourceFiles) {
-          if (!isInsideDir(fileInfo.absolutePath, crossDir)) continue
+          if (!isInsideDir(fileInfo.absolutePath, coordinatorDir)) continue
           const sf =
             context.morphProject.getSourceFile(fileInfo.absolutePath) ??
             context.morphProject.addSourceFileAtPath(fileInfo.absolutePath)
@@ -76,7 +76,7 @@ export const appLayerRule: Rule = {
               diagnostics.push({
                 ruleId: RULE_ID,
                 severity: "error",
-                message: `${cross}/ imports from app/ — cross- folders must not depend on the App layer`,
+                message: `orchestrate/${coordinator.name}/ imports from app/ — orchestrate/ folders must not depend on the App layer`,
                 location: { filePath: fileInfo.absolutePath },
                 suggestion:
                   "Use domain events or shared/ instead of importing from app/ directly.",

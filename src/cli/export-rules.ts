@@ -1,6 +1,6 @@
 import { getLevelDefinition } from "@u83ism/architecture-rules"
 import type { ArchitectureLevel } from "@u83ism/architecture-rules"
-import type { AnalysisResult } from "../types/config.js"
+import type { DetectedAnalysisResult } from "../types/config.js"
 import type { FatThresholds } from "../types/config.js"
 
 export type RulesTarget = "claude" | "cursor" | "cline" | "gemini"
@@ -29,32 +29,32 @@ const LEVEL_CONSTRAINTS: Readonly<Record<ArchitectureLevel, readonly string[]>> 
   ],
   3: [
     "parse.ts is the HTTP boundary — converts unknown input to typed domain values",
-    "parse.ts must not access DB or call repository.ts",
+    "parse.ts must not access DB or call store.ts",
     "workflow.ts must not parse raw input directly — delegate to parse.ts",
   ],
   4: [
-    "repository.ts exported functions: reads use find*/list*/get*/count*/search*, writes use create*/save*/update*/delete*/remove*",
-    "repository.ts must return plain domain types — not ORM-generated types",
+    "store.ts exported functions: reads use find*/list*/get*/count*/search*, writes use create*/save*/update*/delete*/remove*",
+    "store.ts must return plain domain types — not ORM-generated types",
     "workflow.ts must not import ORM packages directly",
   ],
   5: [
     "logic.ts / logic/*.ts functions must have a domain prefix (userCan*, orderCan*, calcOrder*, etc.)",
     "logic functions must return Result type for business rejections — no throw",
     "logic functions must have corresponding test files",
-    "logic functions must not import repository.ts or client.ts",
+    "logic functions must not import store.ts or client.ts",
     "slime.config.ts must define an errors map: DomainError strings → HTTP status codes",
     "workflow.ts should use throw only for TechnicalErrors — use Result err + slime.config.ts for DomainErrors",
   ],
   6: [
-    "domain folders (domainXxx/) must not import from each other directly",
+    "domain folders (domains/<name>/) must not import from each other directly",
     "only app/ may import domain folders",
     "app/route.ts must be an aggregator only — no URL literals",
-    "route definitions belong in domain/*/routes.ts",
+    "route definitions belong in domains/*/routes.ts",
     "client.ts must only be accessed via its adapter.ts (ACL boundary)",
   ],
   7: [
-    "cross-domain coordination belongs in cross-* folders",
-    "cross-* folders must not import from app/ directly",
+    "cross-domain coordination belongs in orchestrate/<name>/ folders",
+    "orchestrate/ folders must not import from app/ directly",
     "Logic tests are mandatory — missing test files are errors at Lv7",
     "nested domain isolation: domainA must not import subdirectories of domainB",
   ],
@@ -62,7 +62,7 @@ const LEVEL_CONSTRAINTS: Readonly<Record<ArchitectureLevel, readonly string[]>> 
     "domain events are defined in shared/events.ts",
     "event types must have a readonly type discriminant field (e.g. readonly type: 'UserCreated')",
     "event types must not contain class instances",
-    "cross-* folders handle transaction orchestration only — external API calls belong in domain adapters",
+    "orchestrate/ folders handle transaction orchestration only — external API calls belong in domain adapters",
   ],
   9: [
     "domain logic is isolated from infrastructure via ports.ts interfaces",
@@ -71,7 +71,7 @@ const LEVEL_CONSTRAINTS: Readonly<Record<ArchitectureLevel, readonly string[]>> 
     "Ports & Adapters: infrastructure/ implements the ports.ts contracts",
   ],
   10: [
-    "CQRS: write operations live in domain/*/command/, read operations in domain/*/query/",
+    "CQRS: write operations live in domains/*/command/, read operations in domains/*/query/",
     "command/ must not import from query/ — reads and writes are fully separated",
     "query/ should not import domain logic — use ReadPort and read models only",
     "query/ files must not grow large — split further if needed",
@@ -128,7 +128,7 @@ const buildAiGuidanceSection = (level: ArchitectureLevel, thresholds: FatThresho
   return lines.join("\n")
 }
 
-const buildMigrationSection = (result: AnalysisResult): string => {
+const buildMigrationSection = (result: DetectedAnalysisResult): string => {
   if (result.missingForNext.length === 0) {
     return `Already at the maximum architecture level (Lv${result.level}).`
   }
@@ -139,7 +139,7 @@ const buildMigrationSection = (result: AnalysisResult): string => {
 }
 
 export const generateRulesContent = (
-  result: AnalysisResult,
+  result: DetectedAnalysisResult,
   thresholds: FatThresholds,
 ): string => {
   const def = getLevelDefinition(result.level)

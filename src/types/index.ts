@@ -3,6 +3,13 @@ export type Result<T, E = string> =
   | { readonly ok: false; readonly error: E }
 
 export type { Severity, DiagnosticLocation, Diagnostic } from "./diagnostic.js"
-export type { SourceFileInfo, DomainFolder, ProjectSnapshot } from "./analysis.js"
-export type { FatThresholds, KaachanConfig, AnalysisResult } from "./config.js"
+export type {
+  SourceFileInfo,
+  DomainFolder,
+  OrchestrateFolder,
+  LayerFiles,
+  ProjectSnapshot,
+} from "./analysis.js"
+export type { FatThresholds, KaachanConfig, AnalysisResult, DetectedAnalysisResult } from "./config.js"
+export { isLevelDetected } from "./config.js"
 export type { RuleContext, Rule, RuleResult } from "./rule.js"

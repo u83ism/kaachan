@@ -1,5 +1,5 @@
-// Bad: Logic layer must not import repository or client directly
-import { findUserById } from "./repository"
+// Bad: Logic layer must not import store or client directly
+import { findUserById } from "./store"
 import { fetchExternalData } from "./client"
 
 export const userCanDoSomething = async (userId: string) => {

@@ -31,8 +31,8 @@ describe("infrastructure-boundary rule — ORM in domain folders", () => {
       (d) => d.ruleId === "infrastructure-boundary" && d.severity === "error",
     )
     expect(errors.length).toBeGreaterThanOrEqual(1)
-    // domainUser/service.ts imports @prisma/client
-    expect(errors.some((d) => d.message.includes("domainUser"))).toBe(true)
+    // domains/user/service.ts imports @prisma/client
+    expect(errors.some((d) => d.message.includes("domains/user/"))).toBe(true)
     expect(errors.some((d) => d.message.includes("@prisma/client"))).toBe(true)
   })
 
@@ -73,7 +73,7 @@ describe("infrastructure-boundary rule — workflow port acceptance", () => {
       (d) => d.ruleId === "infrastructure-boundary" && d.severity === "hint",
     )
     expect(hints.length).toBeGreaterThanOrEqual(1)
-    expect(hints.some((d) => d.message.includes("domainUser"))).toBe(true)
+    expect(hints.some((d) => d.message.includes("domains/user/"))).toBe(true)
     expect(hints.some((d) => d.message.includes("ports.ts"))).toBe(true)
   })
 })

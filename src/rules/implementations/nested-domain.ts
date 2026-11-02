@@ -18,7 +18,7 @@ const isInsideDir = (filePath: string, dir: string): boolean => {
  * Returns true when resolvedPath is inside domainAbsPath but at a nested level
  * (i.e. inside a subdirectory of the domain, not a top-level file).
  *
- * Example: domainUser/core/utils.ts → nested; domainUser/workflow.ts → not nested
+ * Example: domains/user/core/utils.ts → nested; domains/user/workflow.ts → not nested
  */
 const isNestedInDomain = (resolvedPath: string, domainAbsPath: string): boolean => {
   const normalDomain = normalizeSep(domainAbsPath)
@@ -54,9 +54,9 @@ const checkSourceFile = (
       diagnostics.push({
         ruleId: RULE_ID,
         severity: "error",
-        message: `Import of nested path "${domain.name}/${nestedRelPath}" from outside "${domain.name}" violates parent→child isolation`,
+        message: `Import of nested path "domains/${domain.name}/${nestedRelPath}" from outside "domains/${domain.name}/" violates parent→child isolation`,
         location: { filePath },
-        suggestion: `Only files within ${domain.name}/ may access its nested subdomain paths. Expose a public API via ${domain.name}/index.ts instead.`,
+        suggestion: `Only files within domains/${domain.name}/ may access its nested subdomain paths. Expose a public API via domains/${domain.name}/index.ts instead.`,
       })
       break // report once per import declaration
     }

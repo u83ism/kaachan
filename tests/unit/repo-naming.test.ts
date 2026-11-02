@@ -21,7 +21,7 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
   ...overrides,
 })
 
-describe("repo-naming rule — repository naming convention", () => {
+describe("repo-naming rule — store naming convention", () => {
   it("emits hint for each non-conventional exported function name", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4-violations")))
     expect(result.ok).toBe(true)
@@ -54,7 +54,7 @@ describe("repo-naming rule — repository naming convention", () => {
     expect(messages.every((m) => !m.includes("createUser"))).toBe(true)
   })
 
-  it("does not activate at Lv3 (no repository.ts)", async () => {
+  it("does not activate at Lv3 (no store.ts)", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv3")))
     expect(result.ok).toBe(true)
     if (!result.ok) return

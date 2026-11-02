@@ -1,10 +1,18 @@
 import { readdirSync, existsSync } from "node:fs"
 import { join, relative } from "node:path"
-import { FOLDER_PATTERNS, LAYER_FILES, FOLDER_NAMES, SHARED_EVENTS_FILE } from "@u83ism/architecture-rules"
-import type { DomainFolder, ProjectSnapshot, SourceFileInfo } from "../types/analysis.js"
+import { LAYER_FILES, FOLDER_NAMES, SHARED_EVENTS_FILE } from "@u83ism/architecture-rules"
+import type {
+  DomainFolder,
+  LayerFiles,
+  OrchestrateFolder,
+  ProjectSnapshot,
+  SourceFileInfo,
+} from "../types/analysis.js"
 import type { Result } from "../types/index.js"
 
 type Entries = { readonly files: readonly string[]; readonly dirs: readonly string[] }
+
+const PARSE_FOLDER = "parse"
 
 const listEntries = (dir: string): Entries => {
   try {
@@ -32,14 +40,64 @@ const collectTsFiles = (dir: string, rootDir: string): readonly SourceFileInfo[]
   return [...fromFiles, ...fromDirs]
 }
 
-const scanDomainFolder = (domainPath: string, name: string): DomainFolder => {
-  const { files, dirs } = listEntries(domainPath)
+const listTsFilesIn = (dir: string): readonly string[] =>
+  listEntries(dir).files
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => join(dir, f))
+
+const listSubfolders = (dir: string): readonly { readonly name: string; readonly absolutePath: string }[] =>
+  listEntries(dir).dirs.map((name) => ({ name, absolutePath: join(dir, name) }))
+
+const scanDomainFolder = (name: string, absolutePath: string): DomainFolder => {
+  const { files, dirs } = listEntries(absolutePath)
+  const hasCommand = dirs.includes(FOLDER_NAMES.COMMAND)
+  const hasQuery = dirs.includes(FOLDER_NAMES.QUERY)
+  const hasCqrsPorts = [FOLDER_NAMES.COMMAND, FOLDER_NAMES.QUERY].some((sub) =>
+    existsSync(join(absolutePath, sub, LAYER_FILES.PORTS)),
+  )
   return {
     name,
-    absolutePath: domainPath,
-    hasPorts: files.includes(LAYER_FILES.PORTS),
-    hasCommand: dirs.includes(FOLDER_NAMES.COMMAND),
-    hasQuery: dirs.includes(FOLDER_NAMES.QUERY),
+    absolutePath,
+    hasPorts: files.includes(LAYER_FILES.PORTS) || hasCqrsPorts,
+    hasCommand,
+    hasQuery,
+  }
+}
+
+/** A layer file in `dir`, plus the files of its promotion folder (e.g. `logic/`) when given */
+const findLayerFiles = (
+  dir: string,
+  fileName: string,
+  folderName?: string,
+): readonly string[] => {
+  const filePath = join(dir, fileName)
+  const fromFile = existsSync(filePath) ? [filePath] : []
+  const fromFolder = folderName !== undefined ? listTsFilesIn(join(dir, folderName)) : []
+  return [...fromFile, ...fromFolder]
+}
+
+const collectLayerFiles = (
+  sourceRoot: string,
+  domainFolders: readonly DomainFolder[],
+  orchestrateFolders: readonly OrchestrateFolder[],
+): LayerFiles => {
+  const domainDirs = domainFolders.flatMap((d) => [
+    d.absolutePath,
+    join(d.absolutePath, FOLDER_NAMES.COMMAND),
+    join(d.absolutePath, FOLDER_NAMES.QUERY),
+  ])
+  const dirs = [
+    sourceRoot,
+    join(sourceRoot, FOLDER_NAMES.APP),
+    join(sourceRoot, FOLDER_NAMES.SHARED),
+    ...domainDirs,
+    ...orchestrateFolders.map((o) => o.absolutePath),
+  ]
+  return {
+    store: dirs.flatMap((d) => findLayerFiles(d, LAYER_FILES.STORE)),
+    workflow: dirs.flatMap((d) => findLayerFiles(d, LAYER_FILES.WORKFLOW)),
+    parse: dirs.flatMap((d) => findLayerFiles(d, LAYER_FILES.PARSE, PARSE_FOLDER)),
+    logic: dirs.flatMap((d) => findLayerFiles(d, LAYER_FILES.LOGIC, FOLDER_NAMES.LOGIC)),
   }
 }
 
@@ -54,23 +112,17 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
   const { files, dirs } = listEntries(sourceRoot)
 
   const hasLogicFolder = dirs.includes(FOLDER_NAMES.LOGIC)
-  const logicFolderFiles = hasLogicFolder
-    ? listEntries(join(sourceRoot, FOLDER_NAMES.LOGIC)).files
-        .filter((f) => f.endsWith(".ts"))
-        .map((f) => join(sourceRoot, FOLDER_NAMES.LOGIC, f))
-    : []
+  const logicFolderFiles = hasLogicFolder ? listTsFilesIn(join(sourceRoot, FOLDER_NAMES.LOGIC)) : []
 
-  const PARSE_FOLDER = "parse"
   const hasParseFolder = dirs.includes(PARSE_FOLDER)
-  const parseFolderFiles = hasParseFolder
-    ? listEntries(join(sourceRoot, PARSE_FOLDER)).files
-        .filter((f) => f.endsWith(".ts"))
-        .map((f) => join(sourceRoot, PARSE_FOLDER, f))
-    : []
-  const crossFolders = dirs.filter((d) => d.startsWith(FOLDER_PATTERNS.CROSS_PREFIX))
-  const domainFolders = dirs
-    .filter((d) => FOLDER_PATTERNS.DOMAIN.test(d))
-    .map((name) => scanDomainFolder(join(sourceRoot, name), name))
+  const parseFolderFiles = hasParseFolder ? listTsFilesIn(join(sourceRoot, PARSE_FOLDER)) : []
+
+  // Every folder under domains/ and orchestrate/ counts, kebab-case or not:
+  // the folder-name-not-kebab-case rule reports the names, level detection does not depend on them.
+  const domainFolders = listSubfolders(join(sourceRoot, FOLDER_NAMES.DOMAINS)).map((d) =>
+    scanDomainFolder(d.name, d.absolutePath),
+  )
+  const orchestrateFolders = listSubfolders(join(sourceRoot, FOLDER_NAMES.ORCHESTRATE))
 
   const sharedPath = join(sourceRoot, FOLDER_NAMES.SHARED)
   const hasSharedEvents = existsSync(join(sharedPath, SHARED_EVENTS_FILE))
@@ -86,7 +138,7 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
       hasParse: files.includes(LAYER_FILES.PARSE) || hasParseFolder,
       hasParseFolder,
       parseFolderFiles,
-      hasRepository: files.includes(LAYER_FILES.REPOSITORY),
+      hasStore: files.includes(LAYER_FILES.STORE),
       hasClient: files.includes(LAYER_FILES.CLIENT),
       hasLogic: files.includes(LAYER_FILES.LOGIC) || hasLogicFolder,
       hasLogicFolder,
@@ -94,9 +146,10 @@ export const scanProject = (rootDir: string): Result<ProjectSnapshot> => {
       hasAppFolder: dirs.includes(FOLDER_NAMES.APP),
       hasSharedFolder: dirs.includes(FOLDER_NAMES.SHARED),
       hasInfrastructureFolder: dirs.includes(FOLDER_NAMES.INFRASTRUCTURE),
-      crossFolders,
+      orchestrateFolders,
       hasSharedEvents,
       domainFolders,
+      layerFiles: collectLayerFiles(sourceRoot, domainFolders, orchestrateFolders),
       sourceFiles: collectTsFiles(rootDir, rootDir),
     },
   }

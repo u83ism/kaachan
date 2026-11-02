@@ -83,4 +83,39 @@ describe("formatLevel", () => {
     expect(output).toContain("Missing for Lv2:")
     expect(output).toContain("workflow.ts")
   })
+
+  it("renders not-detected output", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "no-level")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const output = formatLevel(result.value)
+    expect(output).toContain("No Slime Architecture level detected")
+    expect(output).toContain("Missing for Lv1:")
+    expect(output).toContain("route.ts")
+  })
+})
+
+describe("analyze — level detection by layout", () => {
+  it("reports no level and runs no rules without route.ts or a domain structure", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "no-level")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBeNull()
+    expect(result.value.diagnostics).toHaveLength(0)
+  })
+
+  it("detects Lv6 from a domain structure with no flat layer files", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-domains-only")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBe(6)
+    expect(result.value.missingForNext).toEqual(["orchestrate/<name>/"])
+  })
+
+  it("detects Lv10 when ports.ts lives in command/ and query/", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv10-cqrs-ports")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.level).toBe(10)
+  })
 })
