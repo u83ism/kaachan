@@ -9,26 +9,32 @@ import type { Rule, RuleContext } from "../types/rule.js"
 import type { Result } from "../types/index.js"
 import { scanProject } from "./scanner.js"
 import { createMorphProject } from "./project.js"
+import { readSlimeConfig } from "./slime-config.js"
 
 const runActiveRules = async (
   config: KaachanConfig,
   rules: readonly Rule[],
   snapshot: ProjectSnapshot,
   level: ArchitectureLevel,
-): Promise<readonly Diagnostic[]> => {
+): Promise<Result<readonly Diagnostic[]>> => {
   const activeRules = getRulesForLevel(rules, level).filter(
     (r) => !config.disabledRules.includes(r.id),
   )
-  if (activeRules.length === 0) return []
+  if (activeRules.length === 0) return { ok: true, value: [] }
+
+  const morphProject = createMorphProject(config.rootDir)
+  const slimeConfig = readSlimeConfig(config.rootDir, morphProject)
+  if (!slimeConfig.ok) return slimeConfig
 
   const context: RuleContext = {
     rootDir: config.rootDir,
     level,
     snapshot,
+    slimeConfig: slimeConfig.value,
     config,
-    morphProject: createMorphProject(config.rootDir),
+    morphProject,
   }
-  return runRules(activeRules, context)
+  return { ok: true, value: await runRules(activeRules, context) }
 }
 
 export const analyze = async (
@@ -41,8 +47,11 @@ export const analyze = async (
   const snapshot = scanResult.value
   const levelResult = detectLevel(snapshot)
 
-  const diagnostics =
-    levelResult.level === null ? [] : await runActiveRules(config, rules, snapshot, levelResult.level)
+  const diagnostics: Result<readonly Diagnostic[]> =
+    levelResult.level === null
+      ? { ok: true, value: [] }
+      : await runActiveRules(config, rules, snapshot, levelResult.level)
+  if (!diagnostics.ok) return diagnostics
 
   return {
     ok: true,
@@ -50,7 +59,7 @@ export const analyze = async (
       level: levelResult.level,
       levelEvidence: levelResult.evidence,
       missingForNext: levelResult.missingForNext,
-      diagnostics,
+      diagnostics: diagnostics.value,
     },
   }
 }

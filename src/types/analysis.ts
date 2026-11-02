@@ -1,3 +1,5 @@
+import type { DomainDependencies, TableOwnership } from "@u83ism/architecture-rules"
+
 export interface SourceFileInfo {
   readonly absolutePath: string
   readonly relativePath: string
@@ -30,6 +32,19 @@ export interface LayerFiles {
   readonly parse: readonly string[]
   readonly logic: readonly string[]
 }
+
+/**
+ * The declarations Kaachan reads from `slime.config.ts`.
+ * `domains` / `tables` are undefined when the file does not declare them.
+ */
+export type SlimeConfig =
+  | { readonly kind: "missing" }
+  | {
+      readonly kind: "found"
+      readonly filePath: string
+      readonly domains: DomainDependencies | undefined
+      readonly tables: TableOwnership | undefined
+    }
 
 export interface ProjectSnapshot {
   readonly rootDir: string

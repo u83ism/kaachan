@@ -80,6 +80,7 @@ describe("runRules", () => {
     rootDir: "/project",
     level,
     snapshot: {} as ProjectSnapshot,
+    slimeConfig: { kind: "missing" },
     config: {
       rootDir: "/project",
       disabledRules,

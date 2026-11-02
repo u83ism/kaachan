@@ -704,7 +704,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -748,12 +748,14 @@ Since Phase 27 the severities and active levels already follow the catalog (e.g.
 - `domain-undeclared-import` moved to Phase 29, because it needs the dependency declaration
 - New fixtures `lv3-workflow-new-error/` and `lv6-domain-layer-files/`; `lv2-violations/route.ts` now has three DB-calling handlers and one thin handler
 
-### Phase 29 — Read the domain DAG and table ownership from `slime.config.ts`
+### Phase 29 — Read the domain DAG and table ownership from `slime.config.ts` ✅
 
-- Read the `domains` declaration (`DomainDependencies` type from the shared package). Kaachan currently only checks that the file exists (`slime-config-hint`)
-- Read the `tables` declaration (`TableOwnership`): domain folder name → owned tables, written as the ORM model names that appear in code
-- `domain-undeclared-import`: any domain-to-domain import is currently an error. Allow the imports declared in `domains` (moved from Phase 28)
-- Prerequisite for `domain-dependency-cycle` and the `table-*` rules (Phase 30)
+- `src/core/slime-config.ts` reads the `domains` (`DomainDependencies`) and `tables` (`TableOwnership`) declarations statically with ts-morph; the file is never executed. Supported forms: an object literal default export, a wrapper call (`defineConfig({...})`), `satisfies` / `as`, and identifiers of variables in the same file. Each list must be an array of string literals
+- The result is passed to rules as `RuleContext.slimeConfig` (`{ kind: "missing" }` or `{ kind: "found", domains, tables }`). `slime-config-hint` uses it instead of checking the file itself
+- A `slime.config.ts` that cannot be read statically stops the analysis (`analyze` returns an error, the CLI exits 1). Reading nothing would make every declared dependency look undeclared
+- `domain-undeclared-import` (moved from Phase 28) allows the imports declared in `domains`. Without a declaration, every domain-to-domain import is still an error. `app/` and `orchestrate/` are not checked, since they may import any domain
+- `tables` is read but not used yet; the `table-*` rules and `domain-dependency-cycle` come in Phase 30
+- New fixtures `lv6-declared-deps/` and `lv6-unreadable-config/`; parser unit tests in `tests/unit/slime-config.test.ts`
 
 ### Phase 30 — Unimplemented catalog rules (37)
 

@@ -9,6 +9,7 @@ export type {
   OrchestrateFolder,
   LayerFiles,
   ProjectSnapshot,
+  SlimeConfig,
 } from "./analysis.js"
 export type { FatThresholds, KaachanConfig, AnalysisResult, DetectedAnalysisResult } from "./config.js"
 export { isLevelDetected } from "./config.js"

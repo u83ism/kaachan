@@ -175,6 +175,8 @@ Kaachan performs **cross-domain and cross-layer dependency direction checks** eq
 | Workflow must not directly import ORM | Import graph analysis | Lv4+ |
 | ORM operations outside `infrastructure/` prohibited | Import graph analysis | Lv9+ |
 
+**Reading `slime.config.ts`**: Kaachan reads `domains` and `tables` statically from the default export and never executes the file. The default export may be an object literal, a wrapper call (`defineConfig({...})`), `satisfies` / `as`, or a variable in the same file, and every list must be an array of string literals. If the file cannot be read that way, the analysis stops with an error, because reading nothing would make every declared dependency look undeclared. `app/` and `orchestrate/` may import any domain regardless of the declaration.
+
 **Detection limits**: Import graph analysis can catch structural violations (wrong import direction). Semantic violations — business rules leaking into wrong layers (e.g. a hardcoded threshold in Store that happens to be a domain rule) — are not detectable by static analysis. The rules file provides AI with business context to catch what Kaachan cannot.
 
 Dependency rules are auto-configured to match the architecture level. When `slime migrate --to-level 7` upgrades the level, the analysis targets automatically expand.

@@ -24,6 +24,10 @@ const findTargetDomain = (
 ): DomainFolder | undefined =>
   domainFolders.find((d) => isInsideDir(resolvedImport, d.absolutePath))
 
+/** Domains the domain may import, from `domains` in slime.config.ts (none when undeclared) */
+const declaredDependencies = (context: RuleContext, domain: string): readonly string[] =>
+  context.slimeConfig.kind === "found" ? (context.slimeConfig.domains?.[domain] ?? []) : []
+
 const checkSourceFile = (
   sourceFile: SourceFile,
   filePath: string,
@@ -48,13 +52,13 @@ const checkSourceFile = (
     if (targetDomain === undefined) continue
 
     if (importerDomain !== undefined) {
-      if (importerDomain.name !== targetDomain.name) {
+      const isDeclared = declaredDependencies(context, importerDomain.name).includes(targetDomain.name)
+      if (importerDomain.name !== targetDomain.name && !isDeclared) {
         diagnostics.push({
           ruleId: "domain-undeclared-import",
-          message: `Cross-domain import: "${importerDomain.name}" imports from "${targetDomain.name}"`,
+          message: `domains/${importerDomain.name}/ imports domains/${targetDomain.name}/, which slime.config.ts does not declare as a dependency of "${importerDomain.name}"`,
           location: { filePath },
-          suggestion:
-            "Use shared events or app-level orchestration instead of direct cross-domain imports.",
+          suggestion: `If ${importerDomain.name} depends on ${targetDomain.name}, declare it in slime.config.ts (domains: { ${importerDomain.name}: ["${targetDomain.name}"] }). Otherwise combine them in app/ or orchestrate/.`,
         })
       }
     } else if (importerInShared) {

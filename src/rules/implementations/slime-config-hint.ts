@@ -1,5 +1,3 @@
-import { join } from "node:path"
-import { existsSync } from "node:fs"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -12,7 +10,7 @@ export const slimeConfigHintRule: Rule<Id> = {
   id: "slime-config-hint",
   ruleIds: RULE_IDS,
   check(context: RuleContext): readonly Finding<Id>[] {
-    if (existsSync(join(context.snapshot.rootDir, "slime.config.ts"))) return []
+    if (context.slimeConfig.kind === "found") return []
 
     return [
       {
