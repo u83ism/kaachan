@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("infrastructure-boundary rule — ORM in domain folders", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary" && d.severity === "error",
+      (d) => isFrom(d, "infrastructure-boundary") && d.severity === "error",
     )
     expect(errors.length).toBeGreaterThanOrEqual(1)
     // domains/user/service.ts imports @prisma/client
@@ -42,7 +43,7 @@ describe("infrastructure-boundary rule — ORM in domain folders", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary" && d.severity === "error",
+      (d) => isFrom(d, "infrastructure-boundary") && d.severity === "error",
     )
     // infrastructure/userRepo.ts must NOT be flagged
     expect(errors.every((d) => !d.location.filePath.includes("infrastructure"))).toBe(true)
@@ -56,7 +57,7 @@ describe("infrastructure-boundary rule — ORM outside infrastructure", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary" && d.severity === "error",
+      (d) => isFrom(d, "infrastructure-boundary") && d.severity === "error",
     )
     // app/index.ts imports @prisma/client
     expect(errors.some((d) => d.location.filePath.includes("app"))).toBe(true)
@@ -70,7 +71,7 @@ describe("infrastructure-boundary rule — workflow port acceptance", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary" && d.severity === "hint",
+      (d) => isFrom(d, "infrastructure-boundary") && d.severity === "hint",
     )
     expect(hints.length).toBeGreaterThanOrEqual(1)
     expect(hints.some((d) => d.message.includes("domains/user/"))).toBe(true)
@@ -85,7 +86,7 @@ describe("infrastructure-boundary rule — activation", () => {
     if (!result.ok) return
 
     const diags = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary",
+      (d) => isFrom(d, "infrastructure-boundary"),
     )
     expect(diags).toHaveLength(0)
   })
@@ -100,7 +101,7 @@ describe("infrastructure-boundary rule — activation", () => {
     if (!result.ok) return
 
     const diags = result.value.diagnostics.filter(
-      (d) => d.ruleId === "infrastructure-boundary",
+      (d) => isFrom(d, "infrastructure-boundary"),
     )
     expect(diags).toHaveLength(0)
   })

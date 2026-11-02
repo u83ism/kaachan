@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -35,7 +36,7 @@ describe("cqrs-enforcement rule — command/query boundary", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cqrs-enforcement" && d.severity === "error",
+      (d) => isFrom(d, "cqrs-enforcement") && d.severity === "error",
     )
     expect(errors.length).toBeGreaterThanOrEqual(1)
     expect(errors.some((d) => d.message.includes("command/"))).toBe(true)
@@ -53,7 +54,7 @@ describe("cqrs-enforcement rule — query/ file bloat", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cqrs-enforcement" && d.severity === "hint",
+      (d) => isFrom(d, "cqrs-enforcement") && d.severity === "hint",
     )
     expect(hints.length).toBeGreaterThanOrEqual(1)
     expect(hints.some((d) => d.message.includes("query/"))).toBe(true)
@@ -66,7 +67,7 @@ describe("cqrs-enforcement rule — query/ file bloat", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cqrs-enforcement" && d.severity === "hint",
+      (d) => isFrom(d, "cqrs-enforcement") && d.severity === "hint",
     )
     expect(hints).toHaveLength(0)
   })
@@ -79,7 +80,7 @@ describe("cqrs-enforcement rule — query/ shared abstraction", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cqrs-enforcement" && d.severity === "warning",
+      (d) => isFrom(d, "cqrs-enforcement") && d.severity === "warning",
     )
     const abstractionWarnings = warnings.filter((d) => d.message.includes("shared abstraction"))
     expect(abstractionWarnings.length).toBeGreaterThanOrEqual(1)
@@ -97,7 +98,7 @@ describe("cqrs-enforcement rule — query/ logic imports", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cqrs-enforcement" && d.severity === "warning",
+      (d) => isFrom(d, "cqrs-enforcement") && d.severity === "warning",
     )
     const logicWarnings = warnings.filter((d) => d.message.includes("domain logic"))
     expect(logicWarnings.length).toBeGreaterThanOrEqual(1)
@@ -111,7 +112,7 @@ describe("cqrs-enforcement rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "cqrs-enforcement")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "cqrs-enforcement"))
     expect(diags).toHaveLength(0)
   })
 
@@ -124,7 +125,7 @@ describe("cqrs-enforcement rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "cqrs-enforcement")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "cqrs-enforcement"))
     expect(diags).toHaveLength(0)
   })
 })

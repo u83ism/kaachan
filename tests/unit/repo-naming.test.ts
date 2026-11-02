@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("repo-naming rule — store naming convention", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-naming" && d.severity === "hint",
+      (d) => isFrom(d, "repo-naming") && d.severity === "hint",
     )
     // fetchUserById, retrieveOrders, loadProductCatalog → 3 hints
     expect(hints).toHaveLength(3)
@@ -47,7 +48,7 @@ describe("repo-naming rule — store naming convention", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-naming" && d.severity === "hint",
+      (d) => isFrom(d, "repo-naming") && d.severity === "hint",
     )
     const messages = hints.map((d) => d.message)
     expect(messages.every((m) => !m.includes("findUserByEmail"))).toBe(true)
@@ -59,7 +60,7 @@ describe("repo-naming rule — store naming convention", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const repoHints = result.value.diagnostics.filter((d) => d.ruleId === "repo-naming")
+    const repoHints = result.value.diagnostics.filter((d) => isFrom(d, "repo-naming"))
     expect(repoHints).toHaveLength(0)
   })
 
@@ -68,22 +69,21 @@ describe("repo-naming rule — store naming convention", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const repoHints = result.value.diagnostics.filter((d) => d.ruleId === "repo-naming")
+    const repoHints = result.value.diagnostics.filter((d) => isFrom(d, "repo-naming"))
     expect(repoHints).toHaveLength(0)
   })
 })
 
 describe("repo-naming rule — workflow ORM import", () => {
-  it("emits warning when workflow.ts imports ORM directly", async () => {
+  it("emits a workflow-orm-import error when workflow.ts imports ORM directly", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-naming" && d.severity === "warning",
-    )
-    expect(warnings).toHaveLength(1)
-    expect(warnings[0]?.message).toContain("@prisma/client")
+    const errors = result.value.diagnostics.filter((d) => d.ruleId === "workflow-orm-import")
+    expect(errors).toHaveLength(1)
+    expect(errors[0]?.severity).toBe("error")
+    expect(errors[0]?.message).toContain("@prisma/client")
   })
 
   it("does not emit warning when workflow.ts has no ORM imports", async () => {
@@ -92,7 +92,7 @@ describe("repo-naming rule — workflow ORM import", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-naming" && d.severity === "warning",
+      (d) => isFrom(d, "repo-naming") && d.severity === "warning",
     )
     expect(warnings).toHaveLength(0)
   })
@@ -104,7 +104,7 @@ describe("repo-naming rule — workflow ORM import", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const repoRuleDiagnostics = result.value.diagnostics.filter((d) => d.ruleId === "repo-naming")
+    const repoRuleDiagnostics = result.value.diagnostics.filter((d) => isFrom(d, "repo-naming"))
     expect(repoRuleDiagnostics).toHaveLength(0)
   })
 })

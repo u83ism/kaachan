@@ -1,10 +1,14 @@
 import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { FunctionDeclaration, SourceFile, VariableDeclaration } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "repo-advanced"
+const RULE_IDS = [
+  "store-orm-return-type",
+  "workflow-orm-transaction",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const ORM_PACKAGES = [
   "@prisma/client",
@@ -75,7 +79,7 @@ const getReturnTypeText = (fn: ExportedFn): string | undefined => {
 
 // --- Check 1: ORM type leaking through store.ts return types ---
 
-const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
+const checkRepoOrmLeak = (context: RuleContext): readonly Finding<Id>[] => {
   if (!context.snapshot.hasStore) return []
 
   const filePath = join(context.snapshot.sourceRoot, "store.ts")
@@ -86,7 +90,7 @@ const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
   const ormNames = getOrmImportedNames(sourceFile)
   if (ormNames.size === 0) return []
 
-  const diagnostics: Diagnostic[] = []
+  const diagnostics: Finding<Id>[] = []
 
   for (const fn of getExportedFunctions(sourceFile)) {
     const returnTypeText = getReturnTypeText(fn)
@@ -96,8 +100,7 @@ const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
     if (leakedTypes.length === 0) continue
 
     diagnostics.push({
-      ruleId: RULE_ID,
-      severity: "warning",
+      ruleId: "store-orm-return-type",
       message: `store.ts exposes ORM type in return annotation (${leakedTypes.join(", ")}) — return a plain domain type instead`,
       location: { filePath, line: fn.getStartLineNumber() },
       suggestion:
@@ -110,7 +113,7 @@ const checkRepoOrmLeak = (context: RuleContext): readonly Diagnostic[] => {
 
 // --- Check 2: workflow.ts calling ORM transaction API directly ---
 
-const checkWorkflowTransaction = (context: RuleContext): readonly Diagnostic[] => {
+const checkWorkflowTransaction = (context: RuleContext): readonly Finding<Id>[] => {
   if (!context.snapshot.hasWorkflow) return []
 
   const filePath = join(context.snapshot.sourceRoot, "workflow.ts")
@@ -126,8 +129,7 @@ const checkWorkflowTransaction = (context: RuleContext): readonly Diagnostic[] =
 
   return [
     {
-      ruleId: RULE_ID,
-      severity: "warning",
+      ruleId: "workflow-orm-transaction",
       message: `workflow.ts calls ORM transaction API ($transaction) directly — use slime.withTransaction() instead`,
       location: { filePath, ...(transactionCalls[0] != null ? { line: transactionCalls[0].getStartLineNumber() } : {}) },
       suggestion:
@@ -136,10 +138,10 @@ const checkWorkflowTransaction = (context: RuleContext): readonly Diagnostic[] =
   ]
 }
 
-export const repoAdvancedRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 4,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const repoAdvancedRule: Rule<Id> = {
+  id: "repo-advanced",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     return [...checkRepoOrmLeak(context), ...checkWorkflowTransaction(context)]
   },
 }

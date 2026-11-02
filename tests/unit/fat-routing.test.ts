@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -30,7 +31,7 @@ describe("fat-routing rule — URL string literals in app/route.ts", () => {
     if (!result.ok) return
 
     const diags = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("defines routes directly"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("defines routes directly"),
     )
     expect(diags).toHaveLength(1)
     expect(diags[0]?.severity).toBe("warning")
@@ -46,7 +47,7 @@ describe("fat-routing rule — dead imports in app/route.ts", () => {
     if (!result.ok) return
 
     const diags = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("does not exist"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("does not exist"),
     )
     expect(diags).toHaveLength(1)
     expect(diags[0]?.severity).toBe("warning")
@@ -61,7 +62,7 @@ describe("fat-routing rule — unreachable workflow candidates", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.severity === "hint" && d.message.includes("workflow"),
+      (d) => isFrom(d, "fat-routing") && d.severity === "hint" && d.message.includes("workflow"),
     )
     // domains/user/workflow.ts is not imported by any route — should be flagged
     expect(hints.some((d) => d.message.includes("domains/user/"))).toBe(true)
@@ -71,7 +72,7 @@ describe("fat-routing rule — unreachable workflow candidates", () => {
 })
 
 describe("fat-routing rule — app/route.ts size", () => {
-  it("emits hint when app/route.ts exceeds hintLines threshold", async () => {
+  it("emits no growth hint below warningLines (the catalog only has app-route-size)", async () => {
     const result = await analyze(
       makeConfig(fatRoutingFixture, {
         thresholds: { hintLines: 1, hintFunctions: 1, warningLines: 500, errorLogicFolderLines: 300 },
@@ -80,11 +81,8 @@ describe("fat-routing rule — app/route.ts size", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const sizeHints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("growing large"),
-    )
-    expect(sizeHints.length).toBeGreaterThanOrEqual(1)
-    expect(sizeHints[0]?.severity).toBe("hint")
+    const sizeDiagnostics = result.value.diagnostics.filter((d) => d.ruleId === "app-route-size")
+    expect(sizeDiagnostics).toHaveLength(0)
   })
 
   it("emits warning when app/route.ts exceeds warningLines threshold", async () => {
@@ -97,7 +95,7 @@ describe("fat-routing rule — app/route.ts size", () => {
     if (!result.ok) return
 
     const sizeWarnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("too large"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("too large"),
     )
     expect(sizeWarnings.length).toBeGreaterThanOrEqual(1)
     expect(sizeWarnings[0]?.severity).toBe("warning")
@@ -111,7 +109,7 @@ describe("fat-routing rule — domain co-location (routes.ts)", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("missing routes.ts"),
     )
     // both domains/order and domains/user lack routes.ts
     expect(hints.length).toBeGreaterThanOrEqual(2)
@@ -124,7 +122,7 @@ describe("fat-routing rule — domain co-location (routes.ts)", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("missing routes.ts"),
     )
     expect(hints).toHaveLength(0)
   })
@@ -136,7 +134,7 @@ describe("fat-routing rule — domain co-location (routes.ts)", () => {
     if (!result.ok) return
 
     const hints = result.value.diagnostics.filter(
-      (d) => d.ruleId === "fat-routing" && d.message.includes("missing routes.ts"),
+      (d) => isFrom(d, "fat-routing") && d.message.includes("missing routes.ts"),
     )
     expect(hints).toHaveLength(0)
   })
@@ -148,7 +146,7 @@ describe("fat-routing rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "fat-routing")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "fat-routing"))
     expect(diags).toHaveLength(0)
   })
 
@@ -157,7 +155,7 @@ describe("fat-routing rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "fat-routing")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "fat-routing"))
     expect(diags).toHaveLength(0)
   })
 
@@ -168,7 +166,7 @@ describe("fat-routing rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "fat-routing")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "fat-routing"))
     expect(diags).toHaveLength(0)
   })
 })

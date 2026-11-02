@@ -1,10 +1,14 @@
 import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "events-validation"
+const RULE_IDS = [
+  "event-missing-type-field",
+  "event-class-type",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 /**
  * Built-in TypeScript types that are class-like (declared as interfaces in lib.d.ts,
@@ -38,8 +42,8 @@ const isClassType = (type: import("ts-morph").Type): boolean => {
 const checkEventsFile = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
 
   // Check exported interfaces
   for (const iface of sourceFile.getInterfaces()) {
@@ -48,8 +52,7 @@ const checkEventsFile = (
 
     if (iface.getProperty("type") === undefined) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "event-missing-type-field",
         message: `Event type "${name}" is missing a \`type\` discriminant field`,
         location: { filePath },
         suggestion: `Add \`readonly type: "${name}"\` (or a string literal) to enable discriminated union pattern.`,
@@ -59,8 +62,7 @@ const checkEventsFile = (
     for (const prop of iface.getProperties()) {
       if (isClassType(prop.getType())) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "error",
+          ruleId: "event-class-type",
           message: `Event type "${name}" property "${prop.getName()}" references a class type — event types must be plain data objects`,
           location: { filePath },
           suggestion:
@@ -88,8 +90,7 @@ const checkEventsFile = (
 
     if (!hasTypeField) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "event-missing-type-field",
         message: `Event type "${name}" is missing a \`type\` discriminant field`,
         location: { filePath },
         suggestion: `Add \`readonly type: "${name}"\` (or a string literal) to enable discriminated union pattern.`,
@@ -101,8 +102,7 @@ const checkEventsFile = (
       if (prop === undefined) continue
       if (isClassType(prop.getType())) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "error",
+          ruleId: "event-class-type",
           message: `Event type "${name}" property "${prop.getName()}" references a class type — event types must be plain data objects`,
           location: { filePath },
           suggestion:
@@ -115,10 +115,10 @@ const checkEventsFile = (
   return diagnostics
 }
 
-export const eventsValidationRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 8,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const eventsValidationRule: Rule<Id> = {
+  id: "events-validation",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     if (!context.snapshot.hasSharedEvents) return []
 
     const eventsFilePath = join(context.snapshot.sourceRoot, "shared", "events.ts")

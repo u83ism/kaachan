@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "logic-imports" && d.severity === "error",
+      (d) => isFrom(d, "logic-imports") && d.severity === "error",
     )
     const storeError = errors.find((d) => d.message.includes("store"))
     expect(storeError).toBeDefined()
@@ -40,7 +41,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "logic-imports" && d.severity === "error",
+      (d) => isFrom(d, "logic-imports") && d.severity === "error",
     )
     const clientError = errors.find((d) => d.message.includes("client"))
     expect(clientError).toBeDefined()
@@ -51,7 +52,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const errors = result.value.diagnostics.filter((d) => d.ruleId === "logic-imports")
+    const errors = result.value.diagnostics.filter((d) => isFrom(d, "logic-imports"))
     expect(errors).toHaveLength(2)
   })
 
@@ -60,7 +61,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-imports")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-imports"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -69,7 +70,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-imports")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-imports"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -80,7 +81,7 @@ describe("logic-imports rule — logic.ts violations", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-imports")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-imports"))
     expect(diagnostics).toHaveLength(0)
   })
 })
@@ -92,7 +93,7 @@ describe("logic-imports rule — logic/ folder violations", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "logic-imports" && d.severity === "error",
+      (d) => isFrom(d, "logic-imports") && d.severity === "error",
     )
     expect(errors).toHaveLength(1)
     expect(errors[0]?.message).toContain("store")

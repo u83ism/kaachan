@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -40,7 +41,7 @@ describe("fat-logic rule — logic.ts with prefix mixing", () => {
     const lv5Result = await analyze(makeConfig(join(fixturesDir, "lv5"), { thresholds: lowThresholds }))
     expect(lv5Result.ok).toBe(true)
     if (!lv5Result.ok) return
-    const logicDiags = lv5Result.value.diagnostics.filter((d) => d.ruleId === "fat-logic")
+    const logicDiags = lv5Result.value.diagnostics.filter((d) => isFrom(d, "fat-logic"))
     expect(logicDiags).toHaveLength(0)
   })
 
@@ -48,7 +49,7 @@ describe("fat-logic rule — logic.ts with prefix mixing", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4"), { thresholds: lowThresholds }))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const logicDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-logic")
+    const logicDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-logic"))
     expect(logicDiags).toHaveLength(0)
   })
 
@@ -61,7 +62,7 @@ describe("fat-logic rule — logic.ts with prefix mixing", () => {
     expect(result.ok).toBe(true)
     // fat-workflow fixture is lv2, fat-logic rule activates at lv5 — no fat-logic diag
     if (!result.ok) return
-    const logicDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-logic")
+    const logicDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-logic"))
     expect(logicDiags).toHaveLength(0)
   })
 
@@ -74,7 +75,7 @@ describe("fat-logic rule — logic.ts with prefix mixing", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const logicDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-logic")
+    const logicDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-logic"))
     expect(logicDiags).toHaveLength(0)
   })
 })

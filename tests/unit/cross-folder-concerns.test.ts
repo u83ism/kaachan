@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("cross-folder-concerns rule — external service detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cross-folder-concerns" && d.severity === "warning",
+      (d) => isFrom(d, "cross-folder-concerns") && d.severity === "warning",
     )
     expect(warnings.length).toBeGreaterThanOrEqual(1)
     expect(warnings.some((d) => d.message.includes("nodemailer"))).toBe(true)
@@ -41,7 +42,7 @@ describe("cross-folder-concerns rule — external service detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "cross-folder-concerns",
+      (d) => isFrom(d, "cross-folder-concerns"),
     )
     expect(warnings).toHaveLength(0)
   })
@@ -53,7 +54,7 @@ describe("cross-folder-concerns rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "cross-folder-concerns")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "cross-folder-concerns"))
     expect(diags).toHaveLength(0)
   })
 
@@ -66,7 +67,7 @@ describe("cross-folder-concerns rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "cross-folder-concerns")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "cross-folder-concerns"))
     expect(diags).toHaveLength(0)
   })
 })

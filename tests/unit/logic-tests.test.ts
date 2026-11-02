@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -27,7 +28,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-tests")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-tests"))
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.severity).toBe("warning")
   })
@@ -37,7 +38,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostic = result.value.diagnostics.find((d) => d.ruleId === "logic-tests")
+    const diagnostic = result.value.diagnostics.find((d) => isFrom(d, "logic-tests"))
     expect(diagnostic?.message).toContain("logic.ts")
   })
 
@@ -46,7 +47,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostic = result.value.diagnostics.find((d) => d.ruleId === "logic-tests")
+    const diagnostic = result.value.diagnostics.find((d) => isFrom(d, "logic-tests"))
     expect(diagnostic?.details).toBeDefined()
     expect((diagnostic?.details ?? []).length).toBeGreaterThan(0)
   })
@@ -56,7 +57,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-tests")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-tests"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -65,7 +66,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-tests")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-tests"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -75,7 +76,7 @@ describe("logic-tests rule", () => {
     if (!result.ok) return
 
     // lv5-violations-folder has logic/user.ts with no test
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-tests")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-tests"))
     expect(diagnostics).toHaveLength(1)
     expect(diagnostics[0]?.severity).toBe("warning")
   })
@@ -87,7 +88,7 @@ describe("logic-tests rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "logic-tests")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "logic-tests"))
     expect(diagnostics).toHaveLength(0)
   })
 })

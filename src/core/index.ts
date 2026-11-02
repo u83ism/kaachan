@@ -7,6 +7,7 @@ export { isLevelDetected } from "../types/index.js"
 export type { ArchitectureLevel, LevelResult } from "../level/types.js"
 export type {
   Result,
+  Finding,
   Diagnostic,
   Severity,
   DiagnosticLocation,

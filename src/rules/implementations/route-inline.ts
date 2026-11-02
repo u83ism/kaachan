@@ -1,9 +1,13 @@
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "route-inline"
+const RULE_IDS = [
+  "route-handler-non-http",
+  "workflow-auth-import",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const HTTP_METHODS = new Set(["get", "post", "put", "delete", "patch"])
 
@@ -36,8 +40,8 @@ const isAuthPackage = (specifier: string): boolean =>
 const checkInlineHandlers = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
 
   const callExprs = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)
 
@@ -61,8 +65,7 @@ const checkInlineHandlers = (
     }
 
     diagnostics.push({
-      ruleId: RULE_ID,
-      severity: "warning",
+      ruleId: "route-handler-non-http",
       message: `route.ts defines an inline handler for .${propAccess.getName()}() — extract to a Workflow file`,
       location: { filePath, line: call.getStartLineNumber() },
       suggestion:
@@ -80,7 +83,7 @@ const checkInlineHandlers = (
 const checkWorkflowAuthImports = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Diagnostic[] => {
+): readonly Finding<Id>[] => {
   const authImports = sourceFile
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue())
@@ -90,8 +93,7 @@ const checkWorkflowAuthImports = (
 
   return [
     {
-      ruleId: RULE_ID,
-      severity: "warning",
+      ruleId: "workflow-auth-import",
       message: `workflow.ts imports auth library directly (${authImports.join(", ")}) — move to middleware.ts`,
       location: { filePath },
       suggestion:
@@ -100,11 +102,11 @@ const checkWorkflowAuthImports = (
   ]
 }
 
-export const routeInlineRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 2,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
+export const routeInlineRule: Rule<Id> = {
+  id: "route-inline",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
 
     for (const fileInfo of context.snapshot.sourceFiles) {
       const filePath = fileInfo.absolutePath

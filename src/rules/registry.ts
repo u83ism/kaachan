@@ -1,5 +1,6 @@
 import type { ArchitectureLevel } from "../level/types.js"
 import type { Rule } from "../types/rule.js"
+import { severityAt } from "./runner.js"
 import { fatWorkflowRule } from "./implementations/fat-workflow.js"
 import { fatParseRule } from "./implementations/fat-parse.js"
 import { parseViolationsRule } from "./implementations/parse-violations.js"
@@ -13,7 +14,6 @@ import { depDirectionRule } from "./implementations/dep-direction.js"
 import { appLayerRule } from "./implementations/app-layer.js"
 import { clientAclRule } from "./implementations/client-acl.js"
 import { fatRoutingRule } from "./implementations/fat-routing.js"
-import { nestedDomainRule } from "./implementations/nested-domain.js"
 import { eventsValidationRule } from "./implementations/events-validation.js"
 import { crossFolderConcernsRule } from "./implementations/cross-folder-concerns.js"
 import { infrastructureBoundaryRule } from "./implementations/infrastructure-boundary.js"
@@ -36,7 +36,6 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   clientAclRule,
   fatLogicRule,
   fatRoutingRule,
-  nestedDomainRule,
   eventsValidationRule,
   crossFolderConcernsRule,
   infrastructureBoundaryRule,
@@ -51,7 +50,8 @@ export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[
   rule,
 ]
 
+/** Rule modules with at least one catalog rule active at the level */
 export const getRulesForLevel = (
   rules: readonly Rule[],
   level: ArchitectureLevel,
-): readonly Rule[] => rules.filter((r) => r.activateFromLevel <= level)
+): readonly Rule[] => rules.filter((r) => r.ruleIds.some((id) => severityAt(id, level) !== undefined))

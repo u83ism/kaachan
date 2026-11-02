@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,7 +27,7 @@ describe("slime-config-hint rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "slime-config-hint")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "slime-config-hint"))
     expect(diags).toHaveLength(1)
     expect(diags[0]?.severity).toBe("hint")
   })
@@ -35,7 +36,7 @@ describe("slime-config-hint rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "slime-config-hint")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "slime-config-hint"))
     expect(diag?.message).toContain("slime.config.ts")
     expect(diag?.message).toContain("DomainError")
   })
@@ -44,15 +45,24 @@ describe("slime-config-hint rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-with-slime-config")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "slime-config-hint")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "slime-config-hint"))
     expect(diags).toHaveLength(0)
   })
 
-  it("does not activate at Lv4", async () => {
-    const result = await analyze(makeConfig(join(fixturesDir, "lv4")))
+  it("is active from Lv3 (slime-config-missing)", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv3")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "slime-config-hint")
+    const diags = result.value.diagnostics.filter((d) => d.ruleId === "slime-config-missing")
+    expect(diags).toHaveLength(1)
+    expect(diags[0]?.severity).toBe("hint")
+  })
+
+  it("does not activate at Lv2", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv2")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "slime-config-hint"))
     expect(diags).toHaveLength(0)
   })
 
@@ -62,7 +72,7 @@ describe("slime-config-hint rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "slime-config-hint")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "slime-config-hint"))
     expect(diags).toHaveLength(0)
   })
 })

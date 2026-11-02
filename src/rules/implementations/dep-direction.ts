@@ -1,10 +1,14 @@
 import { resolve, dirname, join } from "node:path"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 import type { DomainFolder } from "../../types/analysis.js"
 
-const RULE_ID = "dep-direction"
+const RULE_IDS = [
+  "domain-undeclared-import",
+  "shared-imports-domain",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
 
@@ -24,18 +28,16 @@ const checkSourceFile = (
   sourceFile: SourceFile,
   filePath: string,
   context: RuleContext,
-): readonly Diagnostic[] => {
+): readonly Finding<Id>[] => {
   const { domainFolders, sourceRoot } = context.snapshot
   if (domainFolders.length === 0) return []
 
-  const appDir = join(sourceRoot, "app")
   const sharedDir = join(sourceRoot, "shared")
 
-  const importerInApp = isInsideDir(filePath, appDir)
   const importerInShared = isInsideDir(filePath, sharedDir)
   const importerDomain = domainFolders.find((d) => isInsideDir(filePath, d.absolutePath))
 
-  const diagnostics: Diagnostic[] = []
+  const diagnostics: Finding<Id>[] = []
 
   for (const importDecl of sourceFile.getImportDeclarations()) {
     const specifier = importDecl.getModuleSpecifierValue()
@@ -48,8 +50,7 @@ const checkSourceFile = (
     if (importerDomain !== undefined) {
       if (importerDomain.name !== targetDomain.name) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "error" as const,
+          ruleId: "domain-undeclared-import",
           message: `Cross-domain import: "${importerDomain.name}" imports from "${targetDomain.name}"`,
           location: { filePath },
           suggestion:
@@ -58,20 +59,11 @@ const checkSourceFile = (
       }
     } else if (importerInShared) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning" as const,
+        ruleId: "shared-imports-domain",
         message: `shared/ imports from domain "${targetDomain.name}" — shared must not depend on domains`,
         location: { filePath },
         suggestion:
           "Move domain-specific logic out of shared/, or invert the dependency via events.",
-      })
-    } else if (!importerInApp) {
-      diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "error" as const,
-        message: `File outside app/ imports from domain "${targetDomain.name}" — domains must only be referenced from app/`,
-        location: { filePath },
-        suggestion: "Move the domain interaction into the app/ layer.",
       })
     }
   }
@@ -79,11 +71,11 @@ const checkSourceFile = (
   return diagnostics
 }
 
-export const depDirectionRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 6,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
+export const depDirectionRule: Rule<Id> = {
+  id: "dep-direction",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
 
     for (const fileInfo of context.snapshot.sourceFiles) {
       const filePath = fileInfo.absolutePath

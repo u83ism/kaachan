@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -33,7 +34,7 @@ describe("fat-workflow rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "fat-workflow")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const workflowDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-workflow")
+    const workflowDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-workflow"))
     expect(workflowDiags).toHaveLength(0)
   })
 
@@ -43,7 +44,7 @@ describe("fat-workflow rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const workflowDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-workflow")
+    const workflowDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-workflow"))
     expect(workflowDiags).toHaveLength(1)
     expect(workflowDiags[0]?.severity).toBe("hint")
   })
@@ -54,7 +55,7 @@ describe("fat-workflow rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "fat-workflow")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "fat-workflow"))
     expect(diag?.message).toContain("lines")
     expect(diag?.message).toContain("functions")
   })
@@ -66,7 +67,7 @@ describe("fat-workflow rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "fat-workflow")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "fat-workflow"))
     expect(diag?.severity).toBe("warning")
   })
 
@@ -76,7 +77,7 @@ describe("fat-workflow rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const workflowDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-workflow")
+    const workflowDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-workflow"))
     expect(workflowDiags).toHaveLength(0)
   })
 
@@ -89,7 +90,7 @@ describe("fat-workflow rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const workflowDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-workflow")
+    const workflowDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-workflow"))
     expect(workflowDiags).toHaveLength(0)
   })
 })

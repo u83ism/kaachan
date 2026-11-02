@@ -1,11 +1,15 @@
 import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { SyntaxKind } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 import type { DomainFolder } from "../../types/analysis.js"
 
-const RULE_ID = "infrastructure-boundary"
+const RULE_IDS = [
+  "orm-outside-infrastructure",
+  "workflow-not-port-injected",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const ORM_PACKAGES = [
   "@prisma/client",
@@ -42,10 +46,10 @@ const isPortLikeTypeNode = (typeNode: import("ts-morph").TypeNode | undefined): 
   return kind === SyntaxKind.TypeReference || kind === SyntaxKind.FunctionType
 }
 
-const checkOrmBoundary = (context: RuleContext): readonly Diagnostic[] => {
+const checkOrmBoundary = (context: RuleContext): readonly Finding<Id>[] => {
   const { sourceRoot, domainFolders, sourceFiles } = context.snapshot
   const infrastructureDir = join(sourceRoot, "infrastructure")
-  const diagnostics: Diagnostic[] = []
+  const diagnostics: Finding<Id>[] = []
 
   for (const fileInfo of sourceFiles) {
     // Files inside infrastructure/ are allowed to import ORM
@@ -68,8 +72,7 @@ const checkOrmBoundary = (context: RuleContext): readonly Diagnostic[] => {
 
     if (domainOwner !== undefined) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "error",
+        ruleId: "orm-outside-infrastructure",
         message: `domains/${domainOwner.name}/ imports ORM (${ormImports.join(", ")}) directly — domain files must not access the database`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
@@ -77,8 +80,7 @@ const checkOrmBoundary = (context: RuleContext): readonly Diagnostic[] => {
       })
     } else {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "error",
+        ruleId: "orm-outside-infrastructure",
         message: `File imports ORM (${ormImports.join(", ")}) outside infrastructure/ — ORM access must be isolated in infrastructure/`,
         location: { filePath: fileInfo.absolutePath },
         suggestion: "Move ORM usage into infrastructure/ and expose only port interfaces to the rest of the codebase.",
@@ -89,8 +91,8 @@ const checkOrmBoundary = (context: RuleContext): readonly Diagnostic[] => {
   return diagnostics
 }
 
-const checkWorkflowPortAcceptance = (context: RuleContext): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+const checkWorkflowPortAcceptance = (context: RuleContext): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
 
   const domainsWithPorts = context.snapshot.domainFolders.filter(
     (d): d is DomainFolder & { hasPorts: true } => d.hasPorts,
@@ -131,8 +133,7 @@ const checkWorkflowPortAcceptance = (context: RuleContext): readonly Diagnostic[
 
     if (!anyFunctionHasPortParam) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "hint",
+        ruleId: "workflow-not-port-injected",
         message: `domains/${domain.name}/workflow.ts has ports.ts but no exported function accepts a function-type or port parameter`,
         location: { filePath: workflowPath },
         suggestion:
@@ -144,10 +145,10 @@ const checkWorkflowPortAcceptance = (context: RuleContext): readonly Diagnostic[
   return diagnostics
 }
 
-export const infrastructureBoundaryRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 9,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const infrastructureBoundaryRule: Rule<Id> = {
+  id: "infrastructure-boundary",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     return [...checkOrmBoundary(context), ...checkWorkflowPortAcceptance(context)]
   },
 }

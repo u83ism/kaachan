@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("parse-violations rule — parse.ts DB access", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "parse-violations" && d.severity === "error",
+      (d) => isFrom(d, "parse-violations") && d.severity === "error",
     )
     expect(errors).toHaveLength(1)
     expect(errors[0]?.message).toContain("@prisma/client")
@@ -40,7 +41,7 @@ describe("parse-violations rule — parse.ts DB access", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "parse-violations" && d.severity === "error",
+      (d) => isFrom(d, "parse-violations") && d.severity === "error",
     )
     expect(errors).toHaveLength(0)
   })
@@ -50,7 +51,7 @@ describe("parse-violations rule — parse.ts DB access", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "parse-violations")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "parse-violations"))
     expect(diagnostics).toHaveLength(0)
   })
 })
@@ -62,7 +63,7 @@ describe("parse-violations rule — workflow.ts inline parse", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "parse-violations" && d.severity === "warning",
+      (d) => isFrom(d, "parse-violations") && d.severity === "warning",
     )
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.message).toContain("JSON.parse")
@@ -74,7 +75,7 @@ describe("parse-violations rule — workflow.ts inline parse", () => {
     if (!result.ok) return
 
     const warning = result.value.diagnostics.find(
-      (d) => d.ruleId === "parse-violations" && d.severity === "warning",
+      (d) => isFrom(d, "parse-violations") && d.severity === "warning",
     )
     expect(warning?.location.line).toBeDefined()
   })
@@ -85,7 +86,7 @@ describe("parse-violations rule — workflow.ts inline parse", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "parse-violations" && d.severity === "warning",
+      (d) => isFrom(d, "parse-violations") && d.severity === "warning",
     )
     expect(warnings).toHaveLength(0)
   })
@@ -99,7 +100,7 @@ describe("parse-violations rule — workflow.ts inline parse", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "parse-violations")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "parse-violations"))
     expect(diagnostics).toHaveLength(0)
   })
 })

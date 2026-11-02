@@ -31,9 +31,8 @@ The opinionated, persistent nature of its feedback is why it is named "Kaachan" 
 | [`overview.md`](./docs/overview.md) | Project overview and Lv1–10 architecture table |
 | [`implementation-plan.md`](./docs/implementation-plan.md) | Full implementation plan (phases, types, CLI interface, project structure) |
 | [`kaachan-design.md`](./docs/kaachan-design.md) | Kaachan linter specification (rules, thresholds, detection strategies) |
-| [`slime-architecture.md`](./docs/slime-architecture.md) | Slime Architecture level-by-level detail |
-| [`slime-fw.md`](./docs/slime-fw.md) | Slime FW features and implementation details |
-| [`adr.md`](./docs/adr.md) | Architecture Decision Records and Q&A |
+| [`static-vs-llm.md`](./docs/static-vs-llm.md) | What Kaachan detects statically and what is left to the AI via rules files |
+| [`feedback-emoji-rogue.md`](./docs/feedback-emoji-rogue.md) | Requirements from the first non-web adoption attempt |
 
 ## Usage
 
@@ -41,7 +40,7 @@ The opinionated, persistent nature of its feedback is why it is named "Kaachan" 
 npx kaachan               # analyze current directory
 npx kaachan ./src         # analyze specific path
 npx kaachan --level       # show detected architecture level and evidence only
-npx kaachan --disable-rule fat-workflow  # skip a specific rule
+npx kaachan --disable-rule parse-db-import  # skip a catalog rule (or a whole module, e.g. fat-workflow)
 ```
 
 ### Exit Codes
@@ -78,27 +77,34 @@ Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 
 ## Rules
 
-| Rule ID | Active from | What it detects | Max severity |
-|---|---|---|---|
-| `fat-workflow` | Lv2 | `workflow.ts` exceeding line/function thresholds | warning |
-| `route-inline` | Lv2 | Inline handlers in `route.ts`; auth library imports in `workflow.ts` | warning |
-| `fat-parse` | Lv3 | `parse.ts` exceeding line/function thresholds | warning |
-| `parse-violations` | Lv3 | `parse.ts` importing ORM/store; `workflow.ts` calling `JSON.parse()` directly | error |
-| `repo-naming` | Lv4 | Non-conventional store function names; `workflow.ts` importing ORM directly | warning |
-| `repo-advanced` | Lv4 | `store.ts` returning ORM types; `workflow.ts` calling ORM transaction API | warning |
-| `fat-logic` | Lv5 | `logic.ts` exceeding thresholds; domain prefix mixing; non-intersecting type groups | error |
-| `logic-imports` | Lv5 | `logic.ts` / `logic/*.ts` importing `store` or `client` | error |
-| `logic-throws` | Lv5 | `throw` statements inside `logic.ts` / `logic/*.ts` | error |
-| `logic-tests` | Lv5–6 (warn) / Lv7+ (error) | Missing test files for `logic.ts` / `logic/*.ts` | error |
-| `dep-direction` | Lv6 | Cross-domain imports; domain referenced from outside `app/`; `shared/` importing domain | error |
-| `app-layer` | Lv6–7 | `app/store.ts`, `app/client.ts`, `app/logic.ts` presence; `orchestrate/*` importing `app/` | error |
-| `client-acl` | Lv6 | `client.ts` accessed from outside `adapter.ts` in same `client/` folder | warning |
-| `fat-routing` | Lv6 | `app/route.ts` size; route definitions in `app/route.ts`; dead or unreachable routes | warning |
-| `nested-domain` | Lv7 | Nested subdomain paths imported from outside their parent domain | error |
-| `events-validation` | Lv8 | `shared/events.ts` types with class properties or missing `type` discriminant | error |
-| `cross-folder-concerns` | Lv8 | `orchestrate/*` folders importing external service packages | warning |
-| `infrastructure-boundary` | Lv9 | ORM imports outside `infrastructure/`; workflows ignoring ports | error |
-| `cqrs-enforcement` | Lv10 | `command/` importing `query/`; query bloat; shared query helpers; query importing logic | error |
+Diagnostics use the rule IDs of `RULE_CATALOG` in `@u83ism/architecture-rules` (79 rules), and the severity of each rule at each level comes from the catalog — Kaachan only detects. A rule that is not active at the detected level is not reported. The full list with severities per level is in the theory repository (`docs/ja/Lv別アーキテクチャリファレンス.md`, "Kaachan検査項目と重大度の一覧").
+
+Kaachan groups the checks into modules. A module runs when at least one of its rules is active at the detected level:
+
+| Module | Catalog rules it reports |
+|---|---|
+| `fat-workflow` | `workflow-size-hint`, `workflow-size-warning` |
+| `route-inline` | `route-handler-non-http`, `workflow-auth-import` |
+| `fat-parse` | `parse-size-hint`, `parse-size-warning`, `parse-folder-file-too-large` |
+| `parse-violations` | `parse-db-import`, `workflow-raw-parse` |
+| `slime-config-hint` | `slime-config-missing` |
+| `workflow-throws` | `workflow-throws-plain-error` |
+| `repo-naming` | `store-naming`, `workflow-orm-import` |
+| `repo-advanced` | `store-orm-return-type`, `workflow-orm-transaction` |
+| `fat-logic` | `logic-size-hint`, `logic-size-warning`, `logic-folder-file-too-large` |
+| `logic-imports` | `logic-store-client-import` |
+| `logic-throws` | `logic-throws` |
+| `logic-tests` | `logic-test-missing` |
+| `dep-direction` | `domain-undeclared-import`, `shared-imports-domain` |
+| `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app` |
+| `client-acl` | `client-direct-import` |
+| `fat-routing` | `app-route-size`, `app-route-defines-routes`, `route-dead-target`, `workflow-unreachable`, `domain-missing-routes` |
+| `events-validation` | `event-missing-type-field`, `event-class-type` |
+| `cross-folder-concerns` | `orchestrate-non-transactional-io` |
+| `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
+| `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
+
+The remaining 37 catalog rules are not implemented yet (see Phase 30 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

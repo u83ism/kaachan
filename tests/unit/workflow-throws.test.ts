@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,7 +27,7 @@ describe("workflow-throws rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-workflow-new-error")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "workflow-throws"))
     expect(diags).toHaveLength(2)
     expect(diags.every((d) => d.severity === "warning")).toBe(true)
   })
@@ -35,7 +36,7 @@ describe("workflow-throws rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-workflow-new-error")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "workflow-throws")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "workflow-throws"))
     expect(diag?.message).toContain("DomainError")
     expect(diag?.message).toContain("Result")
   })
@@ -44,7 +45,7 @@ describe("workflow-throws rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv5-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "workflow-throws"))
     expect(diags).toHaveLength(0)
   })
 
@@ -52,7 +53,7 @@ describe("workflow-throws rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv4")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "workflow-throws"))
     expect(diags).toHaveLength(0)
   })
 
@@ -64,7 +65,7 @@ describe("workflow-throws rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "workflow-throws")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "workflow-throws"))
     expect(diags).toHaveLength(0)
   })
 })

@@ -81,12 +81,12 @@ describe("CLI — diagnostic output", () => {
   })
 
   it("exits 0 when diagnostics are only hints/warnings", () => {
-    const { exitCode } = runCli([resolve(FIXTURES_DIR, "lv4-violations")])
+    const { exitCode } = runCli([resolve(FIXTURES_DIR, "lv2-violations")])
     expect(exitCode).toBe(0)
   })
 
   it("shows hint/warning prefix symbols in output", () => {
-    const { stdout } = runCli([resolve(FIXTURES_DIR, "lv4-violations")])
+    const { stdout } = runCli([resolve(FIXTURES_DIR, "lv2-violations")])
     expect(stdout).toMatch(/[ℹ⚠]/)
   })
 
@@ -94,17 +94,27 @@ describe("CLI — diagnostic output", () => {
     const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "lv5-violations")])
     expect(exitCode).toBe(1)
     expect(stdout).toContain("✗")
-    expect(stdout).toContain("logic-imports")
+    expect(stdout).toContain("[logic-store-client-import]")
   })
 
   it("exits 1 when there are error-severity diagnostics (lv6-violations)", () => {
     const { stdout, exitCode } = runCli([resolve(FIXTURES_DIR, "lv6-violations")])
     expect(exitCode).toBe(1)
-    expect(stdout).toContain("dep-direction")
+    expect(stdout).toContain("[domain-undeclared-import]")
   })
 })
 
 describe("CLI — --disable-rule flag", () => {
+  it("suppresses a single catalog rule ID", () => {
+    const { stdout } = runCli([
+      resolve(FIXTURES_DIR, "lv3-violations"),
+      "--disable-rule",
+      "parse-db-import",
+    ])
+    expect(stdout).not.toContain("[parse-db-import]")
+    expect(stdout).toContain("[workflow-raw-parse]")
+  })
+
   it("suppresses specified rule and exits 0", () => {
     const { exitCode, stdout } = runCli([
       resolve(FIXTURES_DIR, "lv5-violations"),

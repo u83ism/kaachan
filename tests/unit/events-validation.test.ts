@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("events-validation rule — class type detection", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "error",
+      (d) => isFrom(d, "events-validation") && d.severity === "error",
     )
     expect(errors.length).toBeGreaterThanOrEqual(1)
     // UserCreatedEvent.entity is a class type
@@ -42,7 +43,7 @@ describe("events-validation rule — class type detection", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "error",
+      (d) => isFrom(d, "events-validation") && d.severity === "error",
     )
     expect(errors.some((d) => d.message.includes("OrderCompletedEvent"))).toBe(true)
     expect(errors.some((d) => d.message.includes("completedAt"))).toBe(true)
@@ -54,7 +55,7 @@ describe("events-validation rule — class type detection", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "error",
+      (d) => isFrom(d, "events-validation") && d.severity === "error",
     )
     expect(errors).toHaveLength(0)
   })
@@ -67,7 +68,7 @@ describe("events-validation rule — discriminant field detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "warning",
+      (d) => isFrom(d, "events-validation") && d.severity === "warning",
     )
     expect(warnings.length).toBeGreaterThanOrEqual(1)
     expect(warnings.some((d) => d.message.includes("UserCreatedEvent"))).toBe(true)
@@ -79,7 +80,7 @@ describe("events-validation rule — discriminant field detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "warning",
+      (d) => isFrom(d, "events-validation") && d.severity === "warning",
     )
     expect(warnings.some((d) => d.message.includes("PaymentProcessedEvent"))).toBe(true)
   })
@@ -90,7 +91,7 @@ describe("events-validation rule — discriminant field detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "events-validation" && d.severity === "warning",
+      (d) => isFrom(d, "events-validation") && d.severity === "warning",
     )
     expect(warnings).toHaveLength(0)
   })
@@ -102,7 +103,7 @@ describe("events-validation rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "events-validation")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "events-validation"))
     expect(diags).toHaveLength(0)
   })
 
@@ -115,7 +116,7 @@ describe("events-validation rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "events-validation")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "events-validation"))
     expect(diags).toHaveLength(0)
   })
 })

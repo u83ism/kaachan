@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -33,7 +34,7 @@ describe("fat-parse rule", () => {
     const result = await analyze(makeConfig(join(fixturesDir, "fat-parse")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(0)
   })
 
@@ -43,7 +44,7 @@ describe("fat-parse rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(1)
     expect(parseDiags[0]?.severity).toBe("hint")
   })
@@ -54,7 +55,7 @@ describe("fat-parse rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "fat-parse")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "fat-parse"))
     expect(diag?.message).toContain("shared schemas")
   })
 
@@ -65,7 +66,7 @@ describe("fat-parse rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const diag = result.value.diagnostics.find((d) => d.ruleId === "fat-parse")
+    const diag = result.value.diagnostics.find((d) => isFrom(d, "fat-parse"))
     expect(diag?.severity).toBe("warning")
     expect(diag?.suggestion).toContain("shared schemas are allowed")
   })
@@ -76,7 +77,7 @@ describe("fat-parse rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(0)
   })
 
@@ -89,7 +90,7 @@ describe("fat-parse rule", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(0)
   })
 })
@@ -108,7 +109,7 @@ describe("fat-parse rule — parse/ folder mode", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(1)
     expect(parseDiags[0]?.severity).toBe("error")
     expect(parseDiags[0]?.message).toContain("exceeds")
@@ -121,7 +122,7 @@ describe("fat-parse rule — parse/ folder mode", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const parseDiags = result.value.diagnostics.filter((d) => d.ruleId === "fat-parse")
+    const parseDiags = result.value.diagnostics.filter((d) => isFrom(d, "fat-parse"))
     expect(parseDiags).toHaveLength(0)
   })
 

@@ -1,9 +1,12 @@
 import { join } from "node:path"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "logic-imports"
+const RULE_IDS = [
+  "logic-store-client-import",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const FORBIDDEN_LAYER_MODULES = ["store", "client"] as const
 
@@ -15,7 +18,7 @@ const extractLastSegment = (specifier: string): string => {
 const isForbiddenImport = (specifier: string): boolean =>
   (FORBIDDEN_LAYER_MODULES as readonly string[]).includes(extractLastSegment(specifier))
 
-const checkLogicFile = (sourceFile: SourceFile, filePath: string): readonly Diagnostic[] => {
+const checkLogicFile = (sourceFile: SourceFile, filePath: string): readonly Finding<Id>[] => {
   const violations = sourceFile
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue())
@@ -24,8 +27,7 @@ const checkLogicFile = (sourceFile: SourceFile, filePath: string): readonly Diag
   if (violations.length === 0) return []
 
   return violations.map((spec) => ({
-    ruleId: RULE_ID,
-    severity: "error" as const,
+    ruleId: "logic-store-client-import",
     message: `Logic file imports "${spec}" — Logic layer must not depend on Store or Client`,
     location: { filePath },
     suggestion:
@@ -33,11 +35,11 @@ const checkLogicFile = (sourceFile: SourceFile, filePath: string): readonly Diag
   }))
 }
 
-export const logicImportsRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 5,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
+export const logicImportsRule: Rule<Id> = {
+  id: "logic-imports",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
 
     // Check logic.ts (exists when hasLogic is true but hasLogicFolder is false)
     if (context.snapshot.hasLogic && !context.snapshot.hasLogicFolder) {

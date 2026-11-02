@@ -2,19 +2,23 @@ import { join } from "node:path"
 import { measureFile } from "../../analysis/line-counter.js"
 import { checkPrefixes } from "../../analysis/prefix-checker.js"
 import { buildTypeDependencyGraph } from "../../analysis/type-dependency-graph.js"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { FatThresholds } from "../../types/config.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "fat-logic"
+const RULE_IDS = [
+  "logic-size-warning",
+  "logic-size-hint",
+  "logic-folder-file-too-large",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const buildPrefixMixingDiagnostic = (
   filePath: string,
   severity: "warning" | "error",
   prefixes: ReadonlyMap<string, readonly string[]>,
-): Diagnostic => ({
-  ruleId: RULE_ID,
-  severity,
+): Finding<Id> => ({
+  ruleId: severity === "error" ? "logic-folder-file-too-large" : "logic-size-warning",
   message:
     severity === "error"
       ? `${filePath} has mixed domain prefixes — resolve before Lv6 migration`
@@ -29,12 +33,12 @@ const buildPrefixMixingDiagnostic = (
       : "Split into domain-specific files (e.g. logic/user.ts, logic/order.ts).",
 })
 
-const checkLogicFile = (context: RuleContext): readonly Diagnostic[] => {
+const checkLogicFile = (context: RuleContext): readonly Finding<Id>[] => {
   const filePath = join(context.snapshot.sourceRoot, "logic.ts")
   const metricsResult = measureFile(context.morphProject, filePath)
   if (!metricsResult.ok) return []
 
-  const diagnostics: Diagnostic[] = []
+  const diagnostics: Finding<Id>[] = []
   const { lineCount, functionCount } = metricsResult.value
   const { hintLines, hintFunctions, warningLines } = context.config.thresholds
 
@@ -48,8 +52,7 @@ const checkLogicFile = (context: RuleContext): readonly Diagnostic[] => {
     const graphResult = buildTypeDependencyGraph(sourceFile)
     if (graphResult.hasNonIntersecting) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "logic-size-warning",
         message:
           "logic.ts has non-intersecting type dependency groups — functions operate on disconnected domains",
         location: { filePath },
@@ -64,16 +67,14 @@ const checkLogicFile = (context: RuleContext): readonly Diagnostic[] => {
 
   if (lineCount > warningLines) {
     diagnostics.push({
-      ruleId: RULE_ID,
-      severity: "warning",
+      ruleId: "logic-size-warning",
       message: `logic.ts is getting large (${lineCount} lines) — consider promoting to logic/ folder`,
       location: { filePath },
       suggestion: "Promote to logic/ folder with per-domain files (e.g. logic/user.ts).",
     })
   } else if (lineCount > hintLines || functionCount > hintFunctions) {
     diagnostics.push({
-      ruleId: RULE_ID,
-      severity: "hint",
+      ruleId: "logic-size-hint",
       message: `logic.ts has ${lineCount} lines and ${functionCount} functions`,
       location: { filePath },
       suggestion: `Keep under ${hintLines} lines / ${hintFunctions} functions.`,
@@ -83,9 +84,9 @@ const checkLogicFile = (context: RuleContext): readonly Diagnostic[] => {
   return diagnostics
 }
 
-const checkLogicFolder = (context: RuleContext): readonly Diagnostic[] => {
+const checkLogicFolder = (context: RuleContext): readonly Finding<Id>[] => {
   const { errorLogicFolderLines } = context.config.thresholds
-  const diagnostics: Diagnostic[] = []
+  const diagnostics: Finding<Id>[] = []
 
   for (const filePath of context.snapshot.logicFolderFiles) {
     const metricsResult = measureFile(context.morphProject, filePath)
@@ -93,8 +94,7 @@ const checkLogicFolder = (context: RuleContext): readonly Diagnostic[] => {
 
     if (metricsResult.value.lineCount > errorLogicFolderLines) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "error",
+        ruleId: "logic-folder-file-too-large",
         message: `${filePath} exceeds ${errorLogicFolderLines} lines (${metricsResult.value.lineCount} lines) — domain split is overdue`,
         location: { filePath },
         suggestion: "Split into smaller domain-specific files within logic/.",
@@ -113,10 +113,10 @@ const checkLogicFolder = (context: RuleContext): readonly Diagnostic[] => {
   return diagnostics
 }
 
-export const fatLogicRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 5,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const fatLogicRule: Rule<Id> = {
+  id: "fat-logic",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     if (!context.snapshot.hasLogic) return []
     if (context.snapshot.hasLogicFolder) return checkLogicFolder(context)
     return checkLogicFile(context)

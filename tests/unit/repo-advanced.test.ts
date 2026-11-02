@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("repo-advanced rule — store ORM type leak", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-advanced" && d.severity === "warning" && d.message.includes("ORM type"),
+      (d) => isFrom(d, "repo-advanced") && d.severity === "warning" && d.message.includes("ORM type"),
     )
     // findUserById and listUsers both expose User from @prisma/client
     expect(warnings.length).toBeGreaterThanOrEqual(2)
@@ -40,7 +41,7 @@ describe("repo-advanced rule — store ORM type leak", () => {
     if (!result.ok) return
 
     const warning = result.value.diagnostics.find(
-      (d) => d.ruleId === "repo-advanced" && d.message.includes("ORM type"),
+      (d) => isFrom(d, "repo-advanced") && d.message.includes("ORM type"),
     )
     expect(warning?.message).toContain("User")
   })
@@ -51,7 +52,7 @@ describe("repo-advanced rule — store ORM type leak", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-advanced" && d.message.includes("ORM type"),
+      (d) => isFrom(d, "repo-advanced") && d.message.includes("ORM type"),
     )
     expect(warnings).toHaveLength(0)
   })
@@ -61,7 +62,7 @@ describe("repo-advanced rule — store ORM type leak", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "repo-advanced")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "repo-advanced"))
     expect(diagnostics).toHaveLength(0)
   })
 })
@@ -73,7 +74,7 @@ describe("repo-advanced rule — workflow $transaction direct call", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-advanced" && d.message.includes("$transaction"),
+      (d) => isFrom(d, "repo-advanced") && d.message.includes("$transaction"),
     )
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.severity).toBe("warning")
@@ -85,7 +86,7 @@ describe("repo-advanced rule — workflow $transaction direct call", () => {
     if (!result.ok) return
 
     const warning = result.value.diagnostics.find(
-      (d) => d.ruleId === "repo-advanced" && d.message.includes("$transaction"),
+      (d) => isFrom(d, "repo-advanced") && d.message.includes("$transaction"),
     )
     expect(warning?.location.line).toBeDefined()
   })
@@ -96,7 +97,7 @@ describe("repo-advanced rule — workflow $transaction direct call", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "repo-advanced" && d.message.includes("$transaction"),
+      (d) => isFrom(d, "repo-advanced") && d.message.includes("$transaction"),
     )
     expect(warnings).toHaveLength(0)
   })
@@ -110,7 +111,7 @@ describe("repo-advanced rule — workflow $transaction direct call", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "repo-advanced")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "repo-advanced"))
     expect(diagnostics).toHaveLength(0)
   })
 })

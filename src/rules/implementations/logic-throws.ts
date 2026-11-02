@@ -1,20 +1,22 @@
 import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "logic-throws"
+const RULE_IDS = [
+  "logic-throws",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const checkLogicFileForThrows = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Diagnostic[] => {
+): readonly Finding<Id>[] => {
   const throwStatements = sourceFile.getDescendantsOfKind(SyntaxKind.ThrowStatement)
 
   return throwStatements.map((stmt) => ({
-    ruleId: RULE_ID,
-    severity: "error" as const,
+    ruleId: "logic-throws",
     message: `Logic file contains a throw statement — Logic layer must not throw`,
     location: { filePath, line: stmt.getStartLineNumber() },
     suggestion:
@@ -22,11 +24,11 @@ const checkLogicFileForThrows = (
   }))
 }
 
-export const logicThrowsRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 5,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
+export const logicThrowsRule: Rule<Id> = {
+  id: "logic-throws",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
 
     if (context.snapshot.hasLogic && !context.snapshot.hasLogicFolder) {
       const filePath = join(context.snapshot.sourceRoot, "logic.ts")

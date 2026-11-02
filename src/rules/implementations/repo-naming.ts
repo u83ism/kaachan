@@ -1,10 +1,14 @@
 import { join } from "node:path"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "repo-naming"
+const RULE_IDS = [
+  "store-naming",
+  "workflow-orm-import",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const VALID_PREFIXES = [
   "find", "list", "get", "count", "search",
@@ -44,7 +48,7 @@ const getExportedFunctionNames = (sourceFile: SourceFile): readonly string[] => 
   return [...fromDeclarations, ...fromArrows]
 }
 
-const checkStoreNaming = (context: RuleContext): readonly Diagnostic[] => {
+const checkStoreNaming = (context: RuleContext): readonly Finding<Id>[] => {
   if (!context.snapshot.hasStore) return []
 
   const filePath = join(context.snapshot.sourceRoot, "store.ts")
@@ -59,8 +63,7 @@ const checkStoreNaming = (context: RuleContext): readonly Diagnostic[] => {
   if (violations.length === 0) return []
 
   return violations.map((name) => ({
-    ruleId: RULE_ID,
-    severity: "hint" as const,
+    ruleId: "store-naming",
     message: `store.ts: "${name}" does not follow naming conventions`,
     location: { filePath },
     details: [
@@ -71,7 +74,7 @@ const checkStoreNaming = (context: RuleContext): readonly Diagnostic[] => {
   }))
 }
 
-const checkWorkflowOrmImports = (context: RuleContext): readonly Diagnostic[] => {
+const checkWorkflowOrmImports = (context: RuleContext): readonly Finding<Id>[] => {
   if (!context.snapshot.hasWorkflow) return []
 
   const filePath = join(context.snapshot.sourceRoot, "workflow.ts")
@@ -88,8 +91,7 @@ const checkWorkflowOrmImports = (context: RuleContext): readonly Diagnostic[] =>
 
   return [
     {
-      ruleId: RULE_ID,
-      severity: "warning" as const,
+      ruleId: "workflow-orm-import",
       message: `workflow.ts imports ORM directly (${ormImports.join(", ")}) — DB access must go through store.ts`,
       location: { filePath },
       suggestion: "Move DB operations to store.ts and call them from workflow.ts.",
@@ -97,10 +99,10 @@ const checkWorkflowOrmImports = (context: RuleContext): readonly Diagnostic[] =>
   ]
 }
 
-export const repoNamingRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 4,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const repoNamingRule: Rule<Id> = {
+  id: "repo-naming",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     return [
       ...checkStoreNaming(context),
       ...checkWorkflowOrmImports(context),

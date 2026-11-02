@@ -2,10 +2,17 @@ import { join, resolve, dirname } from "node:path"
 import { existsSync } from "node:fs"
 import { SyntaxKind } from "ts-morph"
 import { measureFile } from "../../analysis/line-counter.js"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "fat-routing"
+const RULE_IDS = [
+  "app-route-size",
+  "app-route-defines-routes",
+  "route-dead-target",
+  "workflow-unreachable",
+  "domain-missing-routes",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
 
@@ -34,37 +41,28 @@ const collectImportedPaths = (
   return importedPaths
 }
 
-export const fatRoutingRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 6,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const fatRoutingRule: Rule<Id> = {
+  id: "fat-routing",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     if (!context.snapshot.hasAppFolder) return []
 
     const appRouteFile = join(context.snapshot.sourceRoot, "app", "route.ts")
     if (!existsSync(appRouteFile)) return []
 
-    const diagnostics: Diagnostic[] = []
+    const diagnostics: Finding<Id>[] = []
     const thresholds = context.config.thresholds
 
     // Check 1: app/route.ts size
     const metrics = measureFile(context.morphProject, appRouteFile)
     if (metrics.ok) {
-      const { lineCount, functionCount } = metrics.value
+      const { lineCount } = metrics.value
       if (lineCount > thresholds.warningLines) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "warning",
+          ruleId: "app-route-size",
           message: `app/route.ts is too large (${lineCount} lines) — consider splitting by domain`,
           location: { filePath: appRouteFile },
-          suggestion: "Move route definitions to domain/*/route.ts files.",
-        })
-      } else if (lineCount > thresholds.hintLines || functionCount > thresholds.hintFunctions) {
-        diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "hint",
-          message: `app/route.ts is growing large (${lineCount} lines, ${functionCount} functions)`,
-          location: { filePath: appRouteFile },
-          suggestion: "Consider moving route definitions to domain/*/route.ts files.",
+          suggestion: "Move route definitions to domains/*/routes.ts files.",
         })
       }
     }
@@ -79,8 +77,7 @@ export const fatRoutingRule: Rule = {
       .filter((node) => isUrlPath(node.getLiteralValue()))
     if (urlLiterals.length > 0) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "app-route-defines-routes",
         message: `app/route.ts defines routes directly — at Lv6, move to domains/*/routes.ts`,
         location: { filePath: appRouteFile },
         details: urlLiterals.map((n) => n.getLiteralValue()),
@@ -95,8 +92,7 @@ export const fatRoutingRule: Rule = {
       const resolvedBase = stripExtension(resolve(dirname(appRouteFile), specifier))
       if (!existsSync(resolvedBase + ".ts") && !existsSync(resolvedBase)) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "warning",
+          ruleId: "route-dead-target",
           message: `app/route.ts imports from a path that does not exist: "${specifier}"`,
           location: { filePath: appRouteFile },
           suggestion: "Remove or fix the import specifier.",
@@ -118,8 +114,7 @@ export const fatRoutingRule: Rule = {
       const normalizedWorkflow = normalizeSep(stripExtension(workflowPath))
       if (!importedPaths.has(normalizedWorkflow)) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "hint",
+          ruleId: "workflow-unreachable",
           message: `domains/${domain.name}/workflow.ts is not imported by any route file — may be unreachable`,
           location: { filePath: workflowPath },
           suggestion: "Verify this workflow is reachable via a route or remove if unused.",
@@ -135,8 +130,7 @@ export const fatRoutingRule: Rule = {
       const routesPath = join(domain.absolutePath, "routes.ts")
       if (!existsSync(routesPath)) {
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "hint",
+          ruleId: "domain-missing-routes",
           message: `domains/${domain.name}/ is missing routes.ts — consider co-locating route definitions at Lv6+`,
           location: { filePath: domain.absolutePath },
           suggestion: "Create routes.ts in the domain folder and import it from app/route.ts.",

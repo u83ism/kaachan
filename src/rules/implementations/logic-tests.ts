@@ -1,9 +1,12 @@
 import { join, basename, dirname, relative } from "node:path"
 import { existsSync } from "node:fs"
-import type { Diagnostic, Severity } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "logic-tests"
+const RULE_IDS = [
+  "logic-test-missing",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const testFileCandidates = (filePath: string, rootDir: string): readonly string[] => {
   const name = basename(filePath, ".ts")
@@ -26,19 +29,15 @@ const testFileCandidates = (filePath: string, rootDir: string): readonly string[
 const hasTestFile = (filePath: string, rootDir: string): boolean =>
   testFileCandidates(filePath, rootDir).some(existsSync)
 
-const missingSeverity = (level: number): Severity => (level >= 7 ? "error" : "warning")
-
 const checkLogicFile = (
   filePath: string,
   rootDir: string,
-  level: number,
-): readonly Diagnostic[] => {
+): readonly Finding<Id>[] => {
   if (hasTestFile(filePath, rootDir)) return []
 
   return [
     {
-      ruleId: RULE_ID,
-      severity: missingSeverity(level),
+      ruleId: "logic-test-missing",
       message: `Logic file has no corresponding test file: ${basename(filePath)}`,
       location: { filePath },
       details: testFileCandidates(filePath, rootDir).map((p) => `  expected: ${p}`),
@@ -47,20 +46,20 @@ const checkLogicFile = (
   ]
 }
 
-export const logicTestsRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 5,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
-    const { rootDir, level, snapshot } = context
+export const logicTestsRule: Rule<Id> = {
+  id: "logic-tests",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
+    const { rootDir, snapshot } = context
 
     if (snapshot.hasLogic && !snapshot.hasLogicFolder) {
       const filePath = join(snapshot.sourceRoot, "logic.ts")
-      diagnostics.push(...checkLogicFile(filePath, rootDir, level))
+      diagnostics.push(...checkLogicFile(filePath, rootDir))
     }
 
     for (const logicFilePath of snapshot.logicFolderFiles) {
-      diagnostics.push(...checkLogicFile(logicFilePath, rootDir, level))
+      diagnostics.push(...checkLogicFile(logicFilePath, rootDir))
     }
 
     return diagnostics

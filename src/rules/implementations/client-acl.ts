@@ -1,18 +1,21 @@
 import { join, dirname, resolve } from "node:path"
 import { existsSync } from "node:fs"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "client-acl"
+const RULE_IDS = [
+  "client-direct-import",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
 
 const stripExtension = (p: string): string => p.replace(/\.(ts|js)$/, "")
 
-export const clientAclRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 6,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const clientAclRule: Rule<Id> = {
+  id: "client-acl",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     const clientFilePath = join(context.snapshot.sourceRoot, "client", "client.ts")
     if (!existsSync(clientFilePath)) return []
 
@@ -20,7 +23,7 @@ export const clientAclRule: Rule = {
     const normalizedClientPath = normalizeSep(stripExtension(clientFilePath))
     const normalizedAdapterPath = normalizeSep(adapterFilePath)
 
-    const diagnostics: Diagnostic[] = []
+    const diagnostics: Finding<Id>[] = []
 
     for (const fileInfo of context.snapshot.sourceFiles) {
       const filePath = fileInfo.absolutePath
@@ -39,8 +42,7 @@ export const clientAclRule: Rule = {
         if (resolved !== normalizedClientPath) continue
 
         diagnostics.push({
-          ruleId: RULE_ID,
-          severity: "warning",
+          ruleId: "client-direct-import",
           message: `Direct import of client/client.ts bypasses the ACL boundary`,
           location: { filePath },
           suggestion:

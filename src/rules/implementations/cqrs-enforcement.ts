@@ -1,10 +1,16 @@
 import { join, resolve, dirname } from "node:path"
 import { measureFile } from "../../analysis/line-counter.js"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 import type { DomainFolder } from "../../types/analysis.js"
 
-const RULE_ID = "cqrs-enforcement"
+const RULE_IDS = [
+  "command-imports-query",
+  "query-file-size",
+  "query-shared-helper",
+  "query-imports-domain-logic",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
 
@@ -24,8 +30,8 @@ const checkCommandQueryImports = (
   domain: DomainFolder,
   commandDir: string,
   queryDir: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
   const queryDirNorm = normalizeSep(queryDir)
 
   for (const fileInfo of context.snapshot.sourceFiles) {
@@ -46,8 +52,7 @@ const checkCommandQueryImports = (
       if (!isInsideDir(resolvedNorm, queryDirNorm)) continue
 
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "error",
+        ruleId: "command-imports-query",
         message: `domains/${domain.name}/command/ imports from query/ ("${specifier}") — command and query must not cross-reference`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
@@ -66,8 +71,8 @@ const checkQueryBloat = (
   context: RuleContext,
   domain: DomainFolder,
   queryDir: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
   const hintLines = context.config.thresholds.hintLines
 
   for (const fileInfo of context.snapshot.sourceFiles) {
@@ -78,8 +83,7 @@ const checkQueryBloat = (
 
     if (metrics.value.lineCount > hintLines) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "hint",
+        ruleId: "query-file-size",
         message: `domains/${domain.name}/query/ file is growing large (${metrics.value.lineCount} lines) — consider splitting query concerns`,
         location: { filePath: fileInfo.absolutePath },
         suggestion: "Split into smaller, focused query files (e.g., by use-case or aggregate).",
@@ -98,8 +102,8 @@ const checkQuerySharedAbstraction = (
   context: RuleContext,
   domain: DomainFolder,
   queryDir: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
   const queryDirNorm = normalizeSep(queryDir)
 
   const queryFiles = context.snapshot.sourceFiles.filter((f) =>
@@ -136,8 +140,7 @@ const checkQuerySharedAbstraction = (
   for (const [targetBase, importers] of importedBy) {
     if (importers.size >= 2) {
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "query-shared-helper",
         message: `domains/${domain.name}/query/ shared abstraction: a query-internal helper is imported by ${importers.size} query files`,
         location: { filePath: targetBase + ".ts" },
         suggestion:
@@ -156,8 +159,8 @@ const checkQueryLogicImports = (
   context: RuleContext,
   domain: DomainFolder,
   queryDir: string,
-): readonly Diagnostic[] => {
-  const diagnostics: Diagnostic[] = []
+): readonly Finding<Id>[] => {
+  const diagnostics: Finding<Id>[] = []
   const logicBase = normalizeSep(join(domain.absolutePath, "logic"))
 
   for (const fileInfo of context.snapshot.sourceFiles) {
@@ -179,8 +182,7 @@ const checkQueryLogicImports = (
       if (resolvedBase !== logicBase && !isInsideDir(resolvedBase, logicBase)) continue
 
       diagnostics.push({
-        ruleId: RULE_ID,
-        severity: "warning",
+        ruleId: "query-imports-domain-logic",
         message: `domains/${domain.name}/query/ imports domain logic ("${specifier}") — query/ should use ReadPort and read models only`,
         location: { filePath: fileInfo.absolutePath },
         suggestion:
@@ -192,17 +194,17 @@ const checkQueryLogicImports = (
   return diagnostics
 }
 
-export const cqrsEnforcementRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 10,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const cqrsEnforcementRule: Rule<Id> = {
+  id: "cqrs-enforcement",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     const cqrsDomains = context.snapshot.domainFolders.filter(
       (d) => d.hasCommand && d.hasQuery,
     )
 
     if (cqrsDomains.length === 0) return []
 
-    const diagnostics: Diagnostic[] = []
+    const diagnostics: Finding<Id>[] = []
 
     for (const domain of cqrsDomains) {
       const commandDir = join(domain.absolutePath, "command")

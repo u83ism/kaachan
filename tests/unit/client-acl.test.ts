@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -22,13 +23,13 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
 })
 
 describe("client-acl rule", () => {
-  it("emits warning when a file outside client/adapter.ts imports client/client.ts directly", async () => {
+  it("emits a client-direct-import error when a file outside client/adapter.ts imports client/client.ts directly", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv6-client-acl-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "client-acl" && d.severity === "warning",
+      (d) => d.ruleId === "client-direct-import" && d.severity === "error",
     )
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.location.filePath).toMatch(/domains[\\/]user/)
@@ -39,7 +40,7 @@ describe("client-acl rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const warnings = result.value.diagnostics.filter((d) => d.ruleId === "client-acl")
+    const warnings = result.value.diagnostics.filter((d) => isFrom(d, "client-acl"))
     // Only domains/user/workflow.ts should be flagged, not adapter.ts
     expect(warnings.every((d) => !d.location.filePath.includes("adapter"))).toBe(true)
   })
@@ -49,7 +50,7 @@ describe("client-acl rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "client-acl")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "client-acl"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -58,7 +59,7 @@ describe("client-acl rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "client-acl")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "client-acl"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -71,7 +72,7 @@ describe("client-acl rule", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "client-acl")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "client-acl"))
     expect(diagnostics).toHaveLength(0)
   })
 })

@@ -1,7 +1,10 @@
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "cross-folder-concerns"
+const RULE_IDS = [
+  "orchestrate-non-transactional-io",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 /**
  * External service packages that should not be imported from orchestrate/ folders.
@@ -40,14 +43,14 @@ const isInsideDir = (filePath: string, dir: string): boolean => {
   return nFile === nDir || nFile.startsWith(nDir + "/")
 }
 
-export const crossFolderConcernsRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 8,
-  check(context: RuleContext): readonly Diagnostic[] {
+export const crossFolderConcernsRule: Rule<Id> = {
+  id: "cross-folder-concerns",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
     if (context.snapshot.orchestrateFolders.length === 0) return []
 
     const { orchestrateFolders, sourceFiles } = context.snapshot
-    const diagnostics: Diagnostic[] = []
+    const diagnostics: Finding<Id>[] = []
 
     for (const coordinator of orchestrateFolders) {
       const coordinatorDir = coordinator.absolutePath
@@ -64,8 +67,7 @@ export const crossFolderConcernsRule: Rule = {
           if (!isExternalServicePackage(specifier)) continue
 
           diagnostics.push({
-            ruleId: RULE_ID,
-            severity: "warning",
+            ruleId: "orchestrate-non-transactional-io",
             message: `orchestrate/${coordinator.name}/ imports external service package "${specifier}" — orchestrate/ folders are for transaction orchestration only`,
             location: { filePath: fileInfo.absolutePath },
             suggestion:

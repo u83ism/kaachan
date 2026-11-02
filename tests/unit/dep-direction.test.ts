@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -28,7 +29,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     if (!result.ok) return
 
     const errors = result.value.diagnostics.filter(
-      (d) => d.ruleId === "dep-direction" && d.severity === "error",
+      (d) => isFrom(d, "dep-direction") && d.severity === "error",
     )
     const crossDomainError = errors.find((d) => d.message.includes("Cross-domain import"))
     expect(crossDomainError).toBeDefined()
@@ -36,19 +37,15 @@ describe("dep-direction rule — cross-domain imports", () => {
     expect(crossDomainError?.message).toContain('"user"')
   })
 
-  it("emits error when a file outside app/ imports from a domain", async () => {
+  it("does not flag a file outside app/ that imports from a domain (replaced by the domain DAG)", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv6-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const errors = result.value.diagnostics.filter(
-      (d) =>
-        d.ruleId === "dep-direction" &&
-        d.severity === "error" &&
-        d.message.includes("outside app/"),
+    const outsideApp = result.value.diagnostics.filter(
+      (d) => isFrom(d, "dep-direction") && d.message.includes("outside app/"),
     )
-    expect(errors.length).toBeGreaterThan(0)
-    expect(errors[0]?.message).toContain('"user"')
+    expect(outsideApp).toHaveLength(0)
   })
 
   it("emits warning when shared/ imports from a domain", async () => {
@@ -57,7 +54,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "dep-direction" && d.severity === "warning",
+      (d) => isFrom(d, "dep-direction") && d.severity === "warning",
     )
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.message).toContain('"user"')
@@ -68,7 +65,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "dep-direction")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "dep-direction"))
     const appFilePath = join(fixturesDir, "lv6-violations", "app", "index.ts")
     const appViolations = diagnostics.filter((d) => d.location.filePath === appFilePath)
     expect(appViolations).toHaveLength(0)
@@ -79,7 +76,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "dep-direction")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "dep-direction"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -88,7 +85,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "dep-direction")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "dep-direction"))
     expect(diagnostics).toHaveLength(0)
   })
 
@@ -99,7 +96,7 @@ describe("dep-direction rule — cross-domain imports", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diagnostics = result.value.diagnostics.filter((d) => d.ruleId === "dep-direction")
+    const diagnostics = result.value.diagnostics.filter((d) => isFrom(d, "dep-direction"))
     expect(diagnostics).toHaveLength(0)
   })
 })

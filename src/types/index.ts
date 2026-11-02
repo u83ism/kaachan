@@ -2,7 +2,7 @@ export type Result<T, E = string> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E }
 
-export type { Severity, DiagnosticLocation, Diagnostic } from "./diagnostic.js"
+export type { Severity, DiagnosticLocation, Finding, Diagnostic } from "./diagnostic.js"
 export type {
   SourceFileInfo,
   DomainFolder,

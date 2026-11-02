@@ -721,29 +721,28 @@ Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors o
 - Mechanical renames in the rules so they keep working on the new layout: `repository.ts` → `store.ts`, `cross-*` → `orchestrate/*`, domain names in messages as `domains/<name>/`. Rule IDs, severities and levels are unchanged (Phase 27/28)
 - Rebuilt the fixtures on the new layout and added `no-level/`, `lv6-domains-only/` and `lv10-cqrs-ports/`
 
-### Phase 27 — Rule IDs and severities from `RULE_CATALOG`
+### Phase 27 — Rule IDs and severities from `RULE_CATALOG` ✅
 
 - Each diagnostic uses the catalog rule ID (e.g. `logic-size-hint`), not the module-level ID (`fat-logic`). Modules may keep emitting several catalog IDs
 - Severity comes from `getRuleSeverity(rule, level)`; remove hard-coded severities. A diagnostic whose rule is inactive at the current level is not emitted
+- Implemented as: modules return `Finding`s (no severity) and declare their catalog IDs in `ruleIds` (typed as a literal union per module); `runRules` adds the catalog severity and drops inactive or disabled findings. A module runs when any of its `ruleIds` is active, so `activateFromLevel` is gone
+- `--disable-rule` accepts a catalog rule ID (drops those findings) or a module ID (skips the module)
+- `tests/unit/registry.test.ts` checks that every reported ID is in the catalog, that no ID belongs to two modules, and lists the 37 catalog rules not implemented yet
 - Remove checks that the catalog no longer has:
   - `nested-domain` — absorbed into the domain DAG
   - `dep-direction`: "file outside `app/` imports from a domain" — replaced by the DAG
   - `fat-routing`: the `app/route.ts` growth hint — the catalog only has `app-route-size` (warning)
 
-### Phase 28 — Fix the 10 rules that drift from the catalog
+### Phase 28 — Fix the 4 rules whose detection drifts from the catalog
+
+Since Phase 27 the severities and active levels already follow the catalog (e.g. `slime-config-missing` and `workflow-throws-plain-error` from Lv3, `workflow-orm-import` and `client-direct-import` as errors, `app-owns-logic` as a warning at Lv6). What is left is what each rule detects:
 
 | Catalog rule | Current Kaachan behavior | Change |
 |---|---|---|
-| `route-handler-non-http` | `route-inline` forbids inline handlers (warning from Lv2) | Thin handlers doing HTTP I/O only are allowed; flag handlers calling store/logic/DB. hint Lv2 → warning Lv3 |
-| `workflow-throws-plain-error` | Active from Lv5; the message always says "use Result err" | Active from Lv3; the message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
-| `logic-store-client-import` | `logic-imports` flags only specifiers whose last segment is `repository` or `client` | Flag `store`, `client` and DB/ORM module imports (same ORM package list as the other rules) |
-| `slime-config-missing` | Active from Lv5 | Active from Lv3 |
-| `workflow-orm-import` | warning | error |
-| `store-naming` | Always hint (checks the root `store.ts` only) | hint Lv4 → error Lv6 (the prefix list already matches the catalog, including `search*`) |
-| `store-orm-return-type` | Always warning (checks the root `store.ts` only) | warning Lv4 → error Lv6 |
+| `route-handler-non-http` | `route-inline` flags every inline handler | Thin handlers doing HTTP I/O only are allowed; flag handlers calling store/logic/DB |
+| `workflow-throws-plain-error` | The message always says "use Result err" (wrong advice in Lv3–4) | The message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
+| `logic-store-client-import` | `logic-imports` flags only specifiers whose last segment is `store` or `client` | Also flag DB/ORM module imports (same ORM package list as the other rules) |
 | `domain-undeclared-import` | Any domain-to-domain import is an error | Allowed when declared in `slime.config.ts` (needs Phase 29) |
-| `client-direct-import` | warning | error |
-| `app-owns-logic` | `app/logic.ts` is an error from Lv7, nothing at Lv6 | warning Lv6 → error Lv7 |
 
 All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read the layer file lists collected in Phase 26 instead of fixed root paths, so they keep working after the Lv6 domain split. New rules in Phase 30 do the same.
 
@@ -824,7 +823,7 @@ Order: 26 → 27 → 28 → 29 → 30. Phases 31 and 32 are independent.
 | `cqrs-enforcement` | Lv10 | Phase 19 ✅ |
 | `export:rules` CLI | — | Phase 25 |
 
-Module-level IDs above are replaced by the 79 catalog rule IDs in Phase 27.
+Since Phase 27, diagnostics carry the 79 catalog rule IDs; the IDs above are the module IDs (see the module → catalog rule table in README.md).
 
 ---
 

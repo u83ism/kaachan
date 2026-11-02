@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -22,16 +23,16 @@ const makeConfig = (rootDir: string, overrides?: Partial<KaachanConfig>): Kaacha
 })
 
 describe("route-inline rule — inline handler detection", () => {
-  it("emits warning for each inline arrow function handler in route.ts", async () => {
+  it("emits a route-handler-non-http hint at Lv2 for each inline arrow function handler in route.ts", async () => {
     const result = await analyze(makeConfig(join(fixturesDir, "lv2-violations")))
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.severity === "warning",
+    const inlineHints = result.value.diagnostics.filter(
+      (d) => d.ruleId === "route-handler-non-http" && d.message.includes("inline handler"),
     )
-    const inlineWarnings = warnings.filter((d) => d.message.includes("inline handler"))
-    expect(inlineWarnings.length).toBeGreaterThanOrEqual(2)
+    expect(inlineHints.length).toBeGreaterThanOrEqual(2)
+    expect(inlineHints.every((d) => d.severity === "hint")).toBe(true)
   })
 
   it("includes the HTTP method name in the inline handler message", async () => {
@@ -40,7 +41,7 @@ describe("route-inline rule — inline handler detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
     )
     expect(warnings.some((d) => d.message.includes(".get("))).toBe(true)
     expect(warnings.some((d) => d.message.includes(".post("))).toBe(true)
@@ -52,7 +53,7 @@ describe("route-inline rule — inline handler detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
     )
     // router.delete uses function expression
     expect(warnings.some((d) => d.message.includes(".delete("))).toBe(true)
@@ -65,7 +66,7 @@ describe("route-inline rule — inline handler detection", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.message.includes("inline handler"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("inline handler"),
     )
     expect(warnings).toHaveLength(0)
   })
@@ -78,7 +79,7 @@ describe("route-inline rule — auth library in workflow", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.message.includes("auth library"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("auth library"),
     )
     expect(warnings.length).toBeGreaterThanOrEqual(1)
     expect(warnings.some((d) => d.message.includes("jsonwebtoken"))).toBe(true)
@@ -90,7 +91,7 @@ describe("route-inline rule — auth library in workflow", () => {
     if (!result.ok) return
 
     const warnings = result.value.diagnostics.filter(
-      (d) => d.ruleId === "route-inline" && d.message.includes("auth library"),
+      (d) => isFrom(d, "route-inline") && d.message.includes("auth library"),
     )
     expect(warnings).toHaveLength(0)
   })
@@ -102,7 +103,7 @@ describe("route-inline rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "route-inline")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "route-inline"))
     expect(diags).toHaveLength(0)
   })
 
@@ -115,7 +116,7 @@ describe("route-inline rule — activation", () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
-    const diags = result.value.diagnostics.filter((d) => d.ruleId === "route-inline")
+    const diags = result.value.diagnostics.filter((d) => isFrom(d, "route-inline"))
     expect(diags).toHaveLength(0)
   })
 })

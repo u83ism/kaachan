@@ -2,15 +2,18 @@ import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { SyntaxKind } from "ts-morph"
 import type { SourceFile } from "ts-morph"
-import type { Diagnostic } from "../../types/diagnostic.js"
+import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
-const RULE_ID = "workflow-throws"
+const RULE_IDS = [
+  "workflow-throws-plain-error",
+] as const
+type Id = (typeof RULE_IDS)[number]
 
 const checkWorkflowForNewError = (
   sourceFile: SourceFile,
   filePath: string,
-): readonly Diagnostic[] => {
+): readonly Finding<Id>[] => {
   const throwStatements = sourceFile.getDescendantsOfKind(SyntaxKind.ThrowStatement)
 
   return throwStatements
@@ -22,8 +25,7 @@ const checkWorkflowForNewError = (
       )
     })
     .map((stmt) => ({
-      ruleId: RULE_ID,
-      severity: "warning" as const,
+      ruleId: "workflow-throws-plain-error",
       message: `workflow.ts uses new Error() directly — define a DomainError string and use Result err instead`,
       location: { filePath, line: stmt.getStartLineNumber() },
       suggestion:
@@ -52,11 +54,11 @@ const collectWorkflowPaths = (context: RuleContext): readonly string[] => {
   return paths
 }
 
-export const workflowThrowsRule: Rule = {
-  id: RULE_ID,
-  activateFromLevel: 5,
-  check(context: RuleContext): readonly Diagnostic[] {
-    const diagnostics: Diagnostic[] = []
+export const workflowThrowsRule: Rule<Id> = {
+  id: "workflow-throws",
+  ruleIds: RULE_IDS,
+  check(context: RuleContext): readonly Finding<Id>[] {
+    const diagnostics: Finding<Id>[] = []
 
     for (const filePath of collectWorkflowPaths(context)) {
       const sourceFile =
