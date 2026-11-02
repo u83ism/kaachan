@@ -105,6 +105,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `error-codes` | `error-code-missing-prefix` |
 | `shared-layer` | `shared-side-effects`, `shared-size` |
 | `route-sunset` | `route-sunset-passed` |
+| `table-ownership` | `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared` |
 | `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app`, `app-size` |
 | `client-acl` | `client-direct-import` |
 | `fat-routing` | `app-route-size`, `app-route-defines-routes`, `route-dead-target`, `workflow-unreachable`, `domain-missing-routes` |
@@ -113,7 +114,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
 
-The remaining 22 catalog rules are not implemented yet (see Phases 32–35 in `docs/implementation-plan.md`).
+The remaining 18 catalog rules are not implemented yet (see Phases 33–35 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

@@ -124,6 +124,7 @@ export default {
 
 - Ownership starts from writes, since broken writes do more damage. Read ownership is settled in Lv10 together with `query/`
 - From Lv9 the rules apply to the `infrastructure/<domain>/` adapters. In Lv10, read-side (`query/`) adapters may JOIN across owners; write-side adapters still touch only owned tables
+- Kaachan finds the tables from ORM model names in code: Prisma-style `prisma.<model>.<method>()` and Drizzle-style `insert(t)` / `update(t)` / `delete(t)` / `from(t)` on imported tables. The method tells reads from writes
 - Only the table ↔ domain mapping is in scope. Table design itself (normalization, indexes, types, naming) is out of scope
 
 ---

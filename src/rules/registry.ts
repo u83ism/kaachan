@@ -30,6 +30,7 @@ import { folderNamesRule } from "./implementations/folder-names.js"
 import { errorCodesRule } from "./implementations/error-codes.js"
 import { sharedLayerRule } from "./implementations/shared-layer.js"
 import { routeSunsetRule } from "./implementations/route-sunset.js"
+import { tableOwnershipRule } from "./implementations/table-ownership.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -61,6 +62,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   errorCodesRule,
   sharedLayerRule,
   routeSunsetRule,
+  tableOwnershipRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

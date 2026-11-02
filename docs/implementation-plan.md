@@ -704,7 +704,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -798,14 +798,17 @@ Detection:
 - `isInsideDir` moved to `src/analysis/layer-modules.ts`, next to a new `relativeImports` helper
 - New fixture `lv6-structure/`
 
-### Phase 32 — Lv6 table ownership (4)
+### Phase 32 — Lv6 table ownership (4) ✅
 
-- `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared` (uses `tables` of `slime.config.ts`, read in Phase 29)
+- `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared` (module `table-ownership`, uses `tables` of `slime.config.ts`, read in Phase 29)
 
-Detection notes:
+Detection (`src/analysis/table-access.ts`):
 
-- Tables are identified by ORM model names in store code (e.g. `prisma.user.*` → `user`); writes vs. reads are told apart by the ORM method name
-- Lv10 `query/` read-side adapters are exempt from `table-foreign-read`, and from Lv9 the rules apply to `infrastructure/<domain>/` adapters instead of `store.ts`
+- Tables are identified by ORM model names in code. Prisma style: `<client>.<model>.<method>()` (`prisma.user.findMany()`, `tx.order.create()`, `db.query.users.findFirst()`); reads are `findUnique` / `findFirst` / `findMany` / `count` / `aggregate` / `groupBy` (and `*OrThrow`), writes are `create` / `createMany` / `update` / `updateMany` / `upsert` / `delete` / `deleteMany`. Drizzle style: `insert(t)` / `update(t)` / `delete(t)` (writes) and `from(t)` (reads), counted only when `t` is an imported name, so that `cache.delete(key)` is not a table
+- Checked files: domain store files (`layerFiles.store` inside `domains/<name>/`, `command/` / `query/` included) and every file under `infrastructure/<name>/` (Lv9+). `shared/store.ts` is the home of undeclared tables and is not checked
+- Read-side files are exempt from `table-foreign-read`: a path segment `query` below the domain / adapter folder, or a file name containing "query" (`infrastructure/order/queryAdapter.ts`)
+- Each table and access kind is reported once per file, at its first access. Without a `tables` declaration every touched table is `table-owner-undeclared` (a hint, meant as the inventory for the declaration)
+- New fixtures `lv6-tables/` and `lv10-tables/`; extraction unit tests in `tests/unit/table-access.test.ts`
 
 ### Phase 33 — Lv6 domain merge / re-cut hints (2)
 
