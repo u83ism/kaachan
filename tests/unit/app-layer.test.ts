@@ -167,3 +167,28 @@ describe("app-layer rule — orchestrate/*/ importing app/ at Lv7+", () => {
     expect(crossAppErrors).toHaveLength(0)
   })
 })
+
+describe("app-layer rule — App layer size", () => {
+  it("warns at an app/ file over the warning threshold", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-structure")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const sizes = result.value.diagnostics.filter((d) => d.ruleId === "app-size")
+    expect(sizes).toHaveLength(1)
+    expect(sizes[0]?.severity).toBe("warning")
+    expect(sizes[0]?.message).toMatch(/app[\\/]workflow\.ts is too large \(512 lines\)/)
+  })
+
+  it("leaves app/route.ts to app-route-size", async () => {
+    const result = await analyze(
+      makeConfig(join(fixturesDir, "lv6-fat-routing"), {
+        thresholds: { hintLines: 1, hintFunctions: 1, warningLines: 1, errorLogicFolderLines: 1 },
+      }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const sizes = result.value.diagnostics.filter((d) => d.ruleId === "app-size")
+    expect(sizes.some((d) => d.location.filePath.endsWith("route.ts"))).toBe(false)
+  })
+})

@@ -100,8 +100,12 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `logic-imports` | `logic-store-client-import` |
 | `logic-throws` | `logic-throws` |
 | `logic-tests` | `logic-test-missing` |
-| `dep-direction` | `domain-undeclared-import`, `shared-imports-domain` |
-| `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app` |
+| `dep-direction` | `domain-undeclared-import`, `shared-imports-domain`, `domain-dependency-cycle` |
+| `folder-names` | `folder-name-not-kebab-case` |
+| `error-codes` | `error-code-missing-prefix` |
+| `shared-layer` | `shared-side-effects`, `shared-size` |
+| `route-sunset` | `route-sunset-passed` |
+| `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app`, `app-size` |
 | `client-acl` | `client-direct-import` |
 | `fat-routing` | `app-route-size`, `app-route-defines-routes`, `route-dead-target`, `workflow-unreachable`, `domain-missing-routes` |
 | `events-validation` | `event-missing-type-field`, `event-class-type` |
@@ -109,7 +113,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
 
-The remaining 29 catalog rules are not implemented yet (see Phases 31–35 in `docs/implementation-plan.md`).
+The remaining 22 catalog rules are not implemented yet (see Phases 32–35 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

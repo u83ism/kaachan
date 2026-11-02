@@ -11,6 +11,8 @@ export interface RuleContext {
   readonly slimeConfig: SlimeConfig
   readonly config: KaachanConfig
   readonly morphProject: Project
+  /** YYYY-MM-DD */
+  readonly today: string
 }
 
 /**

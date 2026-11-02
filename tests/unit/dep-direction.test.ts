@@ -119,3 +119,26 @@ describe("dep-direction rule — domains declared in slime.config.ts", () => {
     expect(!result.ok && result.error).toContain("slime.config.ts")
   })
 })
+
+describe("dep-direction rule — cycles in the declaration", () => {
+  it("reports each cycle in slime.config.ts domains as an error", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-structure")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const cycles = result.value.diagnostics.filter((d) => d.ruleId === "domain-dependency-cycle")
+    expect(cycles.map((d) => d.message)).toEqual([
+      "slime.config.ts declares a cycle between domains: legacy → legacy",
+      "slime.config.ts declares a cycle between domains: orderItem → user → orderItem",
+    ])
+    expect(cycles.every((d) => d.severity === "error")).toBe(true)
+    expect(cycles[0]?.location.filePath).toBe(join(fixturesDir, "lv6-structure", "slime.config.ts"))
+  })
+
+  it("reports no cycle for an acyclic declaration", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv6-declared-deps")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.diagnostics.filter((d) => d.ruleId === "domain-dependency-cycle")).toHaveLength(0)
+  })
+})

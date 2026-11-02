@@ -6,19 +6,12 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phases 31–35). Remove an ID here when its rule is implemented */
+/** Catalog rules no module reports yet (Phases 32–35). Remove an ID here when its rule is implemented */
 const NOT_YET_IMPLEMENTED = [
-  "folder-name-not-kebab-case",
-  "domain-dependency-cycle",
   "table-foreign-write",
   "table-foreign-read",
   "table-owner-duplicate",
   "table-owner-undeclared",
-  "error-code-missing-prefix",
-  "shared-side-effects",
-  "shared-size",
-  "app-size",
-  "route-sunset-passed",
   "domain-pair-coordinated",
   "domain-folder-thin",
   "domain-imports-orchestrate",
@@ -79,6 +72,7 @@ describe("runRules", () => {
       thresholds: { hintLines: 300, hintFunctions: 10, warningLines: 500, errorLogicFolderLines: 300 },
     },
     morphProject: {} as Project,
+    today: "2026-11-02",
   })
 
   const fixedRule: Rule<"app-owns-store" | "orchestrate-imports-app"> = {

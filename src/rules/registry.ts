@@ -26,6 +26,10 @@ import { workflowHttpRule } from "./implementations/workflow-http.js"
 import { storeFilterRule } from "./implementations/store-filter.js"
 import { storeInLoopRule } from "./implementations/store-in-loop.js"
 import { logicPrefixRule } from "./implementations/logic-prefix.js"
+import { folderNamesRule } from "./implementations/folder-names.js"
+import { errorCodesRule } from "./implementations/error-codes.js"
+import { sharedLayerRule } from "./implementations/shared-layer.js"
+import { routeSunsetRule } from "./implementations/route-sunset.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -53,6 +57,10 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   storeFilterRule,
   storeInLoopRule,
   logicPrefixRule,
+  folderNamesRule,
+  errorCodesRule,
+  sharedLayerRule,
+  routeSunsetRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

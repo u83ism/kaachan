@@ -1,5 +1,7 @@
 import { resolve, dirname, join } from "node:path"
 import type { SourceFile } from "ts-morph"
+import { findDependencyCycles } from "../../analysis/domain-graph.js"
+import { isInsideDir } from "../../analysis/layer-modules.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 import type { DomainFolder } from "../../types/analysis.js"
@@ -7,16 +9,9 @@ import type { DomainFolder } from "../../types/analysis.js"
 const RULE_IDS = [
   "domain-undeclared-import",
   "shared-imports-domain",
+  "domain-dependency-cycle",
 ] as const
 type Id = (typeof RULE_IDS)[number]
-
-const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
-
-const isInsideDir = (filePath: string, dir: string): boolean => {
-  const nFile = normalizeSep(filePath)
-  const nDir = normalizeSep(dir)
-  return nFile === nDir || nFile.startsWith(nDir + "/")
-}
 
 const findTargetDomain = (
   resolvedImport: string,
@@ -75,6 +70,19 @@ const checkSourceFile = (
   return diagnostics
 }
 
+const checkDeclaredCycles = (context: RuleContext): readonly Finding<Id>[] => {
+  const { slimeConfig } = context
+  if (slimeConfig.kind !== "found" || slimeConfig.domains === undefined) return []
+
+  return findDependencyCycles(slimeConfig.domains).map((cycle) => ({
+    ruleId: "domain-dependency-cycle",
+    message: `slime.config.ts declares a cycle between domains: ${cycle.join(" → ")}`,
+    location: { filePath: slimeConfig.filePath },
+    suggestion:
+      "Make the dependencies one-way: move what both sides need into the upstream domain, or combine the domains in app/ or orchestrate/ instead of importing each other.",
+  }))
+}
+
 export const depDirectionRule: Rule<Id> = {
   id: "dep-direction",
   ruleIds: RULE_IDS,
@@ -89,6 +97,6 @@ export const depDirectionRule: Rule<Id> = {
       diagnostics.push(...checkSourceFile(sourceFile, filePath, context))
     }
 
-    return diagnostics
+    return [...diagnostics, ...checkDeclaredCycles(context)]
   },
 }

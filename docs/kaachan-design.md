@@ -209,6 +209,8 @@ Same structural risk as Fat Logic/Parse exists in `app/route.ts`. From Lv6, rout
 | Domain folder has no `routes.ts` | `domain-missing-routes` | Lv6 (hint) |
 | Route has a `sunset` date that has passed | `route-sunset-passed` | Lv6 (warning) |
 
+`route-sunset-passed` compares the `sunset: "YYYY-MM-DD"` attribute of a route definition with today (`KaachanConfig.today`, the current local date by default).
+
 Note: "dead route" detection via static analysis covers file existence checks only. Actual traffic-based dead route analysis requires runtime access logs — out of Kaachan's scope.
 
 ---

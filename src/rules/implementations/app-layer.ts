@@ -1,5 +1,7 @@
 import { join, resolve, dirname } from "node:path"
 import { existsSync } from "node:fs"
+import { isInsideDir } from "../../analysis/layer-modules.js"
+import { measureFile } from "../../analysis/line-counter.js"
 import type { Finding } from "../../types/diagnostic.js"
 import type { Rule, RuleContext } from "../../types/rule.js"
 
@@ -8,15 +10,31 @@ const RULE_IDS = [
   "app-owns-client",
   "app-owns-logic",
   "orchestrate-imports-app",
+  "app-size",
 ] as const
 type Id = (typeof RULE_IDS)[number]
 
-const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
+/** app/route.ts has its own size rule (app-route-size, in fat-routing) */
+const APP_ROUTE_FILE = "route.ts"
 
-const isInsideDir = (filePath: string, dir: string): boolean => {
-  const nFile = normalizeSep(filePath)
-  const nDir = normalizeSep(dir)
-  return nFile === nDir || nFile.startsWith(nDir + "/")
+/** Files in app/ (other than route.ts) longer than the warning threshold */
+const checkAppSize = (context: RuleContext, appDir: string): readonly Finding<Id>[] => {
+  const { warningLines } = context.config.thresholds
+  return context.snapshot.sourceFiles
+    .filter((f) => isInsideDir(f.absolutePath, appDir) && f.absolutePath !== join(appDir, APP_ROUTE_FILE))
+    .flatMap((f) => {
+      const metrics = measureFile(context.morphProject, f.absolutePath)
+      if (!metrics.ok || metrics.value.lineCount <= warningLines) return []
+      return [
+        {
+          ruleId: "app-size" as const,
+          message: `${f.relativePath} is too large (${metrics.value.lineCount} lines) — the App layer should only aggregate and coordinate`,
+          location: { filePath: f.absolutePath },
+          suggestion:
+            "Move domain-specific work into the domains, and give coordination that keeps growing its own orchestrate/ folder (Lv7).",
+        },
+      ]
+    })
 }
 
 export const appLayerRule: Rule<Id> = {
@@ -84,6 +102,6 @@ export const appLayerRule: Rule<Id> = {
       }
     }
 
-    return diagnostics
+    return [...diagnostics, ...checkAppSize(context, appDir)]
   },
 }

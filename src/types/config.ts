@@ -12,6 +12,8 @@ export interface KaachanConfig {
   readonly rootDir: string
   readonly disabledRules: readonly string[]
   readonly thresholds: FatThresholds
+  /** The date dated rules (`route-sunset-passed`) compare against, as YYYY-MM-DD. Defaults to the current local date */
+  readonly today?: string
 }
 
 /** `level` is null when no level was detected; no rules run in that case */

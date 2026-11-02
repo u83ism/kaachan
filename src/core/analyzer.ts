@@ -11,6 +11,14 @@ import { scanProject } from "./scanner.js"
 import { createMorphProject } from "./project.js"
 import { readSlimeConfig } from "./slime-config.js"
 
+const pad2 = (n: number): string => String(n).padStart(2, "0")
+
+/** The current local date as YYYY-MM-DD */
+const currentDate = (): string => {
+  const now = new Date()
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+}
+
 const runActiveRules = async (
   config: KaachanConfig,
   rules: readonly Rule[],
@@ -33,6 +41,7 @@ const runActiveRules = async (
     slimeConfig: slimeConfig.value,
     config,
     morphProject,
+    today: config.today ?? currentDate(),
   }
   return { ok: true, value: await runRules(activeRules, context) }
 }

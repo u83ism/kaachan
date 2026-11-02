@@ -1,4 +1,4 @@
-import { basename, dirname } from "node:path"
+import { basename, dirname, resolve } from "node:path"
 import { Node, SyntaxKind } from "ts-morph"
 import type {
   ArrowFunction,
@@ -87,3 +87,28 @@ export const exportedFunctions = (sourceFile: SourceFile): readonly ExportedFunc
       : []
   }),
 ]
+
+const normalizeSep = (p: string): string => p.replace(/\\/g, "/")
+
+/** Whether the path is the directory itself or inside it */
+export const isInsideDir = (filePath: string, dir: string): boolean => {
+  const nFile = normalizeSep(filePath)
+  const nDir = normalizeSep(dir)
+  return nFile === nDir || nFile.startsWith(`${nDir}/`)
+}
+
+export interface RelativeImport {
+  readonly specifier: string
+  /** Absolute path the specifier points at, without resolving the extension */
+  readonly resolved: string
+  readonly line: number
+}
+
+/** Relative imports of a file, resolved against its directory */
+export const relativeImports = (sourceFile: SourceFile, filePath: string): readonly RelativeImport[] =>
+  sourceFile.getImportDeclarations().flatMap((decl) => {
+    const specifier = decl.getModuleSpecifierValue()
+    return specifier.startsWith(".")
+      ? [{ specifier, resolved: resolve(dirname(filePath), specifier), line: decl.getStartLineNumber() }]
+      : []
+  })

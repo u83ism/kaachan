@@ -704,7 +704,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -781,9 +781,22 @@ Detection:
 - Shared helpers moved to `src/analysis/layer-modules.ts`: `importedNames`, `namesImportedFrom`, `usedIdentifiers`, `isRelativeLayerImport`, `exportedFunctions`
 - New fixtures `lv4-store-queries/` and `lv5-domain-error/`; `lv3-workflow-new-error/` gained a `DomainError` throw (not reported at Lv3)
 
-### Phase 31 — Lv6 structure and the domain DAG (7)
+### Phase 31 — Lv6 structure and the domain DAG (7) ✅
 
-- `folder-name-not-kebab-case`, `domain-dependency-cycle` (cycles in `domains` of `slime.config.ts`, read in Phase 29), `error-code-missing-prefix`, `shared-side-effects`, `shared-size`, `app-size`, `route-sunset-passed`
+| Catalog rule | Module | How it is detected |
+|---|---|---|
+| `folder-name-not-kebab-case` | `folder-names` | Folders directly under `domains/` and `orchestrate/` against `FOLDER_PATTERNS.KEBAB_CASE`; the suggestion gives the kebab-case name |
+| `domain-dependency-cycle` | `dep-direction` | Cycles in `domains` of `slime.config.ts` (`src/analysis/domain-graph.ts`): one finding per strongly connected component, shown as the shortest cycle from its alphabetically first domain (`order → user → order`). A self-dependency counts |
+| `error-code-missing-prefix` | `error-codes` | UPPER_SNAKE_CASE string literals in `domains/<name>/errors.ts` that do not start with the domain prefix (`order-item` / `orderItem` → `ORDER_ITEM_`) |
+| `shared-side-effects` | `shared-layer` | In `shared/utility.ts` and `shared/smallLogic.ts`: value imports of Node I/O built-ins (`fs`, `http`, `child_process`, …), HTTP clients (`axios`, …), ORM packages or store/client modules; calls to `fetch`, `console.*`, timers or `process.*`; module-level `let` / `var`. Type-only imports are fine |
+| `shared-size` | `shared-layer` | A file under `shared/` longer than `thresholds.warningLines` (500) |
+| `app-size` | `app-layer` | A file under `app/` other than `app/route.ts` (which has `app-route-size`) longer than `thresholds.warningLines` (500) |
+| `route-sunset-passed` | `route-sunset` | A `sunset: "YYYY-MM-DD"` property in a `route.ts` / `routes.ts` whose date is before today |
+
+- The catalog states `shared-size` and `app-size` without numbers. They reuse the threshold of `app-route-size` (`warningLines`, per file); change it together with the theory if it turns out too loose
+- "Today" is `KaachanConfig.today` (YYYY-MM-DD), defaulting to the current local date in `analyze`; rules read it from `RuleContext.today`, so they stay deterministic in tests
+- `isInsideDir` moved to `src/analysis/layer-modules.ts`, next to a new `relativeImports` helper
+- New fixture `lv6-structure/`
 
 ### Phase 32 — Lv6 table ownership (4)
 
