@@ -9,7 +9,7 @@ For project overview, architecture, and implementation plan, read **README.md** 
 - `docs/implementation-plan.md` — implementation phases, types, CLI interface, project structure
 - `docs/kaachan-design.md` — Kaachan linter specification (rules, thresholds, detection strategies)
 
-Theory source of truth: https://github.com/u83ism/kaachan-and-slime-docs
+Theory source of truth: https://github.com/u83ism/slime-architecture-rules (`docs/ja/`; the same repository publishes the shared package `@u83ism/architecture-rules`)
 
 ## Code Style
 See `.claude/rules/code-style.md`.

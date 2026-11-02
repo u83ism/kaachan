@@ -1,7 +1,7 @@
 # Kaachan — Static Analysis vs. LLM Boundary
 
 > This document defines what Kaachan can detect statically and what requires LLM assistance.
-> Source of truth for this boundary: `kaachan-and-slime-docs/Logic層 設計詳細.md` and `Kaachan設計仕様.md`.
+> Source of truth for this boundary: `slime-architecture-rules/docs/ja/Logic層 設計詳細.md` and `Kaachan設計仕様.md`.
 
 ---
 

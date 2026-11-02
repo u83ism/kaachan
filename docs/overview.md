@@ -16,7 +16,7 @@ An architecture evolution theory that **gradually guides developers toward corre
 
 ### `@u83ism/architecture-rules` (Shared Package)
 
-An npm package ([`@u83ism/architecture-rules`](https://www.npmjs.com/package/@u83ism/architecture-rules), source: [slime-architecture-rules](https://github.com/u83ism/slime-architecture-rules)) that provides the Slime Architecture knowledge as TypeScript types and constants — `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, etc.
+An npm package ([`@u83ism/architecture-rules`](https://www.npmjs.com/package/@u83ism/architecture-rules), source: [slime-architecture-rules](https://github.com/u83ism/slime-architecture-rules)) that provides the Slime Architecture knowledge as TypeScript types and constants — `ArchitectureLevel`, `Severity`, `LAYER_FILES`, `FOLDER_NAMES`, `FOLDER_PATTERNS`, `LEVEL_DEFINITIONS`, the rule catalog with per-level severities (`RULE_CATALOG`), the `slime.config.ts` declaration types (`DomainDependencies`, `TableOwnership`), the error response format (`ProblemDetails`), and the AI rules templates (`rules/lv*.md`). The same repository is also the theory source of truth (`docs/ja/`).
 
 Both Kaachan and Slime FW depend on this package as the Single Source of Truth for architecture rule definitions, preventing any divergence between the two tools.
 
@@ -33,13 +33,15 @@ A TypeScript web application framework that works alongside Kaachan. Its name co
 | 1 | `route` | Routing only. Minimal FW unit |
 | 2 | `route` → `Middleware` → `Workflow` | MVC-style Controller redefined as Workflow. Middleware separates HTTP gate processing |
 | 3 | `route` → `Middleware` → `Parse` → `Workflow` | Introduction of "Parse, don't validate". Parse layer owns the HTTP boundary, decoupling Workflow from HTTP |
-| 4 | `Workflow` → `Repository` (query*/command* naming) / `Client` | Establishment of Layered Architecture. Query/Command naming convention plants a CQRS-aware mindset |
+| 4 | `Workflow` → `Store` / `Client` | Establishment of Layered Architecture. Store function naming (`find*` / `list*` / `search*` / `create*` …) and four fixed read shapes (batch `find*ByIds`, unique key, `list*(filter, page)`, `search*(query, page)`) plant a CQRS-aware mindset |
 | 5 | + `Logic` (pure functions, Result type) | Decision Object pattern. Result type (Railway Oriented Programming) eliminates exceptions. **Functional Core, Imperative Shell** (Gary Bernhardt) begins |
-| 6 | `App` / `Domain(s)` / `Shared` / `Client` (+`Adapter`) | Full DDD adoption. ACL (Anti-Corruption Layer) for client/adapter separation. Cross-domain references prohibited |
-| 7 | + `cross-Domain` / Logic test enforcement | Cross-domain coordination structured under `cross-` folder. `slime.defer()` introduces post-commit hooks |
-| 8 | + `shared/events.ts` / `cross-` specialized for Tx | Introduction of Domain Events (DDD). Side effects vs. transactions separated by structure. Return-value approach ensures event visibility |
-| 9 | + `Domain/ports.ts` / `infrastructure/Adapters` | Functional implementation of Hexagonal Architecture (Ports & Adapters). Dependency inversion without DI containers or classes. **Functional Clean Architecture complete** |
-| 10 | `Domain/command/` + `Domain/query/` + `Infrastructure` | Lightweight CQRS (Greg Young style). Read/write models separated by folder structure. **Final goal of this document** |
+| 6 | `app/` / `domains/<name>/` / `shared/` / `client/` (+`adapter`) | Full DDD adoption. ACL (Anti-Corruption Layer) for client/adapter separation. Domain-to-domain imports follow a DAG declared in `slime.config.ts`; each table is owned by one domain (writes only from the owner) |
+| 7 | + `orchestrate/<name>/` / Logic test enforcement | Coordination across domains structured under `orchestrate/`. `slime.defer()` introduces post-commit hooks |
+| 8 | + `shared/events.ts` / `orchestrate/` specialized for Tx | Introduction of Domain Events (DDD). Side effects vs. transactions separated by structure. Return-value approach ensures event visibility |
+| 9 | + `domains/<name>/ports.ts` / `infrastructure/` adapters | Functional implementation of Hexagonal Architecture (Ports & Adapters). Dependency inversion without DI containers or classes. **Functional Clean Architecture complete** |
+| 10 | `domains/<name>/command/` + `query/` (one query per file) + `infrastructure/` | Lightweight CQRS (Greg Young style). Read/write models separated by folder structure; read-side adapters may JOIN across table owners. **Final goal of this document** |
+
+Out of scope: DB design itself (normalization, indexes, column types). Load and reliability concerns (queues, Outbox, performance) are handled on an axis separate from the levels.
 
 ---
 
@@ -63,7 +65,6 @@ A TypeScript web application framework that works alongside Kaachan. Its name co
 
 ## Related Documents
 
-- [slime-architecture.md](./slime-architecture.md) — Lv1–Lv10 detailed design
 - [kaachan-design.md](./kaachan-design.md) — Kaachan linter specification
-- [slime-fw.md](./slime-fw.md) — Slime FW features and implementation
-- [adr.md](./adr.md) — Architecture Decision Records and Q&A
+- [implementation-plan.md](./implementation-plan.md) — implementation phases, types, CLI interface
+- Theory (Japanese, source of truth): [slime-architecture-rules `docs/ja/`](https://github.com/u83ism/slime-architecture-rules/tree/main/docs/ja) — the Lv-by-level reference (`Lv別アーキテクチャリファレンス.md`) is the canonical detailed design

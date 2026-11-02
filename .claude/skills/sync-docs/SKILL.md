@@ -1,15 +1,15 @@
 ---
 name: sync-docs
-description: "Sync the kaachan-and-slime-docs repository, summarize changes, and reflect them into docs/, CLAUDE.md and memory. Use when you want to pull the latest documentation updates from https://github.com/u83ism/kaachan-and-slime-docs."
+description: "Sync the slime-architecture-rules repository (theory docs and the shared @u83ism/architecture-rules package), summarize changes, and reflect them into docs/, CLAUDE.md and memory. Use when you want to pull the latest theory or shared package updates from https://github.com/u83ism/slime-architecture-rules."
 ---
 
-# Sync kaachan-and-slime-docs
+# Sync slime-architecture-rules
 
 ## Repository Relationship
 
 | Repository | Role |
 |---|---|
-| `u83ism/kaachan-and-slime-docs` (GitHub) | **Theory source of truth** — Slime Architecture concept, design rationale, ADRs |
+| `u83ism/slime-architecture-rules` (GitHub; formerly `kaachan-and-slime-docs`) | **Theory source of truth** — Slime Architecture concept, design rationale, ADRs (`docs/ja/`), plus the shared package `@u83ism/architecture-rules` (`src/`, AI rules templates in `rules/_content/`) |
 | `kaachan` (this repo) `docs/` | **Implementation perspective** — implementation plans and design summaries specific to this codebase |
 
 `docs/` contains only implementation-specific documents — not copies of theory docs. When the theory changes, update `docs/` only if it affects Kaachan's implementation details (thresholds, detection strategies, package dependencies, etc.).
@@ -35,7 +35,7 @@ description: "Sync the kaachan-and-slime-docs repository, summarize changes, and
    - If the command fails, stop immediately and instruct the user to install `gh` CLI and run `gh auth login`.
 
 1. **Get the latest commit hash on remote main**
-   - Run `gh api repos/u83ism/kaachan-and-slime-docs/commits/main --jq '.sha'`
+   - Run `gh api repos/u83ism/slime-architecture-rules/commits/main --jq '.sha'`
    - Store this as `REMOTE_SHA`.
 
 2. **Get the previously synced commit hash**
@@ -45,12 +45,13 @@ description: "Sync the kaachan-and-slime-docs repository, summarize changes, and
 
 3. **Identify changed files**
    - If `PREV_SHA == REMOTE_SHA`, report "Already up to date." and stop.
-   - Run `gh api "repos/u83ism/kaachan-and-slime-docs/compare/${PREV_SHA}...${REMOTE_SHA}" --jq '.files[] | [.status, .filename] | @tsv'`
-   - Filter to `.md` files only.
+   - Run `gh api "repos/u83ism/slime-architecture-rules/compare/${PREV_SHA}...${REMOTE_SHA}" --jq '.files[] | [.status, .filename] | @tsv'`
+   - Keep `docs/ja/*.md`, `rules/_content/*.md`, `src/*.ts` and `package.json`. `src/rules-catalog.ts` (rules and severities) and `src/index.ts` (exports) usually matter most for Kaachan.
+   - Before summarizing, check `docs/implementation-plan.md` for an inventory that already covers part of the range (e.g. the "Catch-up" phases) and focus on what it does not cover yet.
 
 4. **Fetch and summarize each changed file**
-   - For each added or modified `.md` file, fetch its content:
-     `gh api "repos/u83ism/kaachan-and-slime-docs/contents/{filename}?ref=main" --jq '.content' | base64 -d`
+   - For each added or modified file, fetch its content (or `git diff PREV_SHA REMOTE_SHA` in the sibling checkout `../slime-architecture-rules` after `git pull`):
+     `gh api "repos/u83ism/slime-architecture-rules/contents/{filename}?ref=main" --jq '.content' | base64 -d`
    - For deleted files, note the deletion.
    - Summarize what changed in each file (added / removed / changed specification, design decisions, constraints).
 
