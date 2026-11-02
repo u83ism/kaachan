@@ -14,6 +14,13 @@ const toDiagnostic = (finding: Finding, level: ArchitectureLevel): readonly Diag
   return severity === undefined ? [] : [{ ...finding, severity }]
 }
 
+/** Catalog rules that are reported only when listed in `enabledRules` (marked "opt-in" in the catalog summary) */
+export const OPT_IN_RULES: readonly string[] = ["defer-suggestion"]
+
+const isReported = (ruleId: string, context: RuleContext): boolean =>
+  !context.config.disabledRules.includes(ruleId) &&
+  (!OPT_IN_RULES.includes(ruleId) || (context.config.enabledRules ?? []).includes(ruleId))
+
 /** Run the rule modules and give each finding the catalog severity; findings of inactive rules are dropped */
 export const runRules = async (
   rules: readonly Rule[],
@@ -22,6 +29,6 @@ export const runRules = async (
   const results = await Promise.all(rules.map((r) => r.check(context)))
   return results
     .flat()
-    .filter((f) => !context.config.disabledRules.includes(f.ruleId))
+    .filter((f) => isReported(f.ruleId, context))
     .flatMap((f) => toDiagnostic(f, context.level))
 }

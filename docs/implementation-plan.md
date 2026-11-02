@@ -182,6 +182,7 @@ npx kaachan ./src         # analyze specific path
 npx kaachan --level       # show detected level + evidence only
 npx kaachan --format json # machine-readable output
 npx kaachan --disable-rule fat-workflow  # skip a specific rule
+npx kaachan --enable-rule defer-suggestion  # report an opt-in rule
 
 npx kaachan export:rules                  # generate AI rules files (all formats)
 npx kaachan export:rules --target claude  # generate CLAUDE.md only
@@ -704,7 +705,7 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass.
 
 The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported).
 
@@ -819,10 +820,23 @@ Both are hints, and the catalog states them without numbers. Decide the threshol
 - `domain-pair-coordinated` — how many co-occurrences of the same domain pair in `app/` or `orchestrate/` count as "repeatedly"
 - `domain-folder-thin` — what "very little in it" means (line count, number of layer files, or both)
 
-### Phase 34 — Lv7–8 rules (7)
+### Phase 34 — Lv7–8 rules (7) ✅
 
-- Coordinators: `domain-imports-orchestrate`, `orchestrate-imports-orchestrate`, `orchestrate-without-transaction`, `defer-suggestion`
-- Events: `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake`
+| Catalog rule | Module | How it is detected |
+|---|---|---|
+| `domain-imports-orchestrate` | `orchestrate-boundary` | A relative import in a file under `domains/<name>/` that resolves into an `orchestrate/<name>/` folder |
+| `orchestrate-imports-orchestrate` | `orchestrate-boundary` | A relative import in a file under `orchestrate/<a>/` that resolves into another `orchestrate/<b>/` |
+| `orchestrate-without-transaction` | `transactions` | No file of an `orchestrate/<name>/` folder calls `withTransaction()` (bare or as a method, e.g. `slime.withTransaction()`) |
+| `defer-suggestion` | `transactions` | Inside the callback of a `withTransaction()` call, a call to `fetch` or to a name imported from an external service package (mail, payments, HTTP clients — the list shared with `orchestrate-non-transactional-io`) or from a client module (`client.ts`, `client/adapter.ts`), unless it is inside `defer(...)` |
+| `events-file-missing` | `events-validation` | `shared/events.ts` does not exist |
+| `events-imports-domain` | `events-validation` | A relative import in `shared/events.ts` that resolves into `domains/` or `orchestrate/` |
+| `event-type-not-upper-snake` | `events-validation` | A string literal in the type of a `type` property in `shared/events.ts` that is not UPPER_SNAKE_CASE |
+
+- **Opt-in rules**: the catalog marks `defer-suggestion` "opt-in" and has no field for it, so Kaachan keeps the list (`OPT_IN_RULES` in `src/rules/runner.ts`). Its findings are dropped unless the rule is listed in `KaachanConfig.enabledRules` (CLI: `--enable-rule defer-suggestion`)
+- `events-file-missing` never fires on a detected level: Lv8 detection itself requires `shared/events.ts`, so a project without it is detected as Lv7. The rule is implemented as the catalog states and tested with the level fixed
+- `lv8-clean/shared/events.ts` used dotted lowercase event types (`user.created`); it now uses UPPER_SNAKE_CASE as the theory requires
+- `EXTERNAL_SERVICE_PACKAGES` moved to `src/analysis/layer-modules.ts`
+- New fixture `lv8-orchestrate/`
 
 ### Phase 35 — Lv9–10 rules (9)
 

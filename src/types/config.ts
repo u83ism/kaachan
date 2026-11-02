@@ -11,6 +11,8 @@ export interface FatThresholds {
 export interface KaachanConfig {
   readonly rootDir: string
   readonly disabledRules: readonly string[]
+  /** Opt-in catalog rules to report (e.g. `defer-suggestion`); other rules need no enabling */
+  readonly enabledRules?: readonly string[]
   readonly thresholds: FatThresholds
   /** The date dated rules (`route-sunset-passed`) compare against, as YYYY-MM-DD. Defaults to the current local date */
   readonly today?: string

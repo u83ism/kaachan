@@ -3,7 +3,12 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { dirname } from "node:path"
 import { analyze } from "../../src/core/analyzer.js"
+import { createMorphProject } from "../../src/core/project.js"
+import { scanProject } from "../../src/core/scanner.js"
+import { eventsValidationRule } from "../../src/rules/implementations/events-validation.js"
+import { runRules } from "../../src/rules/runner.js"
 import type { KaachanConfig } from "../../src/types/config.js"
+import type { RuleContext } from "../../src/types/rule.js"
 import { isFrom } from "../helpers.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -118,5 +123,47 @@ describe("events-validation rule — activation", () => {
 
     const diags = result.value.diagnostics.filter((d) => isFrom(d, "events-validation"))
     expect(diags).toHaveLength(0)
+  })
+})
+
+describe("events-validation rule — Lv8 event file rules", () => {
+  it("reports shared/events.ts importing a domain as an error", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv8-orchestrate")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const diags = result.value.diagnostics.filter((d) => d.ruleId === "events-imports-domain")
+    expect(diags.map((d) => `${d.severity}: ${d.message}`)).toEqual([
+      'error: shared/events.ts imports "../domains/user/types.js" — event types must not depend on domains or orchestrate/',
+    ])
+  })
+
+  it("warns at event type values that are not UPPER_SNAKE_CASE", async () => {
+    const result = await analyze(makeConfig(join(fixturesDir, "lv8-orchestrate")))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const diags = result.value.diagnostics.filter((d) => d.ruleId === "event-type-not-upper-snake")
+    expect(diags.map((d) => `${d.severity}: ${d.message}`)).toEqual([
+      'warning: event type value "userRegistered" is not UPPER_SNAKE_CASE',
+    ])
+    expect(diags[0]?.suggestion).toContain('"USER_REGISTERED"')
+  })
+
+  it("reports a missing shared/events.ts at Lv8", async () => {
+    // Level detection requires shared/events.ts for Lv8, so the rule is checked with the level fixed
+    const snapshot = scanProject(join(fixturesDir, "lv7-violations"))
+    if (!snapshot.ok) throw new Error(snapshot.error)
+    const context: RuleContext = {
+      rootDir: snapshot.value.rootDir,
+      level: 8,
+      snapshot: snapshot.value,
+      slimeConfig: { kind: "missing" },
+      config: makeConfig(snapshot.value.rootDir),
+      morphProject: createMorphProject(snapshot.value.rootDir),
+      today: "2026-11-02",
+    }
+    const diags = (await runRules([eventsValidationRule], context)).filter((d) => d.ruleId === "events-file-missing")
+    expect(diags.map((d) => `${d.severity}: ${d.message}`)).toEqual([
+      "warning: shared/events.ts does not exist — domain events need one place for their types",
+    ])
   })
 })

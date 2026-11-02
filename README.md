@@ -41,6 +41,7 @@ npx kaachan               # analyze current directory
 npx kaachan ./src         # analyze specific path
 npx kaachan --level       # show detected architecture level and evidence only
 npx kaachan --disable-rule parse-db-import  # skip a catalog rule (or a whole module, e.g. fat-workflow)
+npx kaachan --enable-rule defer-suggestion  # report an opt-in rule (off by default)
 ```
 
 ### Exit Codes
@@ -109,12 +110,14 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `app-layer` | `app-owns-store`, `app-owns-client`, `app-owns-logic`, `orchestrate-imports-app`, `app-size` |
 | `client-acl` | `client-direct-import` |
 | `fat-routing` | `app-route-size`, `app-route-defines-routes`, `route-dead-target`, `workflow-unreachable`, `domain-missing-routes` |
-| `events-validation` | `event-missing-type-field`, `event-class-type` |
+| `events-validation` | `event-missing-type-field`, `event-class-type`, `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake` |
+| `orchestrate-boundary` | `domain-imports-orchestrate`, `orchestrate-imports-orchestrate` |
+| `transactions` | `orchestrate-without-transaction`, `defer-suggestion` (opt-in) |
 | `cross-folder-concerns` | `orchestrate-non-transactional-io` |
 | `infrastructure-boundary` | `orm-outside-infrastructure`, `workflow-not-port-injected` |
 | `cqrs-enforcement` | `command-imports-query`, `query-file-size`, `query-shared-helper`, `query-imports-domain-logic` |
 
-The remaining 18 catalog rules are not implemented yet (see Phases 33–35 in `docs/implementation-plan.md`).
+The remaining 11 catalog rules are not implemented yet (see Phases 33 and 35 in `docs/implementation-plan.md`).
 
 ### Severity Escalation
 

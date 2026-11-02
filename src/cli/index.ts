@@ -40,15 +40,20 @@ program.argument("[path]", "Path to analyze (defaults to current directory)", ".
 
 program.option("--level", "Show detected architecture level and evidence only")
 program.option("--disable-rule <ruleId>", "Disable a specific rule")
+program.option("--enable-rule <ruleId>", "Enable an opt-in rule (e.g. defer-suggestion)")
 
-program.action(async (pathArg: string, options: { level?: boolean; disableRule?: string }) => {
+type MainOptions = { level?: boolean; disableRule?: string; enableRule?: string }
+
+program.action(async (pathArg: string, options: MainOptions) => {
   const rootDir = resolve(pathArg)
   const disabledRules = options.disableRule != null ? [options.disableRule] : []
+  const enabledRules = options.enableRule != null ? [options.enableRule] : []
 
   const config: KaachanConfig = {
     ...DEFAULT_CONFIG,
     rootDir,
     disabledRules,
+    enabledRules,
   }
 
   const result = await analyze(config)

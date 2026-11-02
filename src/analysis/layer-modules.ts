@@ -112,3 +112,25 @@ export const relativeImports = (sourceFile: SourceFile, filePath: string): reado
       ? [{ specifier, resolved: resolve(dirname(filePath), specifier), line: decl.getStartLineNumber() }]
       : []
   })
+
+/** External service packages (mail, notifications, payments, HTTP clients): non-DB I/O that cannot be rolled back */
+export const EXTERNAL_SERVICE_PACKAGES = [
+  "nodemailer",
+  "@sendgrid/mail",
+  "sendgrid",
+  "mailgun-js",
+  "@mailgun-js/mailgun.js",
+  "axios",
+  "@aws-sdk/client-ses",
+  "@aws-sdk/client-sns",
+  "twilio",
+  "stripe",
+  "resend",
+  "pusher",
+  "pusher-js",
+  "postmark",
+  "@mailchimp/mailchimp_transactional",
+] as const
+
+export const isExternalServicePackage = (specifier: string): boolean =>
+  EXTERNAL_SERVICE_PACKAGES.some((pkg) => specifier === pkg || specifier.startsWith(`${pkg}/`))

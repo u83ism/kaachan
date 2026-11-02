@@ -6,17 +6,10 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phases 33–35). Remove an ID here when its rule is implemented */
+/** Catalog rules no module reports yet (Phases 33 and 35). Remove an ID here when its rule is implemented */
 const NOT_YET_IMPLEMENTED = [
   "domain-pair-coordinated",
   "domain-folder-thin",
-  "domain-imports-orchestrate",
-  "orchestrate-imports-orchestrate",
-  "defer-suggestion",
-  "events-file-missing",
-  "events-imports-domain",
-  "event-type-not-upper-snake",
-  "orchestrate-without-transaction",
   "infrastructure-missing",
   "domain-imports-infrastructure",
   "ports-has-implementation",

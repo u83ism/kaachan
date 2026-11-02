@@ -126,6 +126,14 @@ describe("CLI — --disable-rule flag", () => {
   })
 })
 
+describe("CLI — --enable-rule flag", () => {
+  it("reports an opt-in rule only when it is enabled", () => {
+    const fixture = resolve(FIXTURES_DIR, "lv8-orchestrate")
+    expect(runCli([fixture]).stdout).not.toContain("[defer-suggestion]")
+    expect(runCli([fixture, "--enable-rule", "defer-suggestion"]).stdout).toContain("[defer-suggestion]")
+  })
+})
+
 describe("CLI — error handling", () => {
   it("exits 1 and prints error for non-existent directory", () => {
     const { stderr, exitCode } = runCli(["/nonexistent/kaachan-test-path"])
