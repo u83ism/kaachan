@@ -6,7 +6,7 @@ import type { Rule, RuleContext } from "../../src/types/rule.js"
 import type { ProjectSnapshot } from "../../src/types/analysis.js"
 import type { Project } from "ts-morph"
 
-/** Catalog rules no module reports yet (Phase 30). Remove an ID here when its rule is implemented */
+/** Catalog rules no module reports yet (Phases 30–35). Remove an ID here when its rule is implemented */
 const NOT_YET_IMPLEMENTED = [
   "route-api-namespace",
   "workflow-http-access",

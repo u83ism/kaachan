@@ -221,7 +221,7 @@ Static analysis cannot answer "how do I split domains?" or "how do I perform mig
 
 ### Templates
 
-The rules templates live in the shared package (`rules/_content/lv1.md` … `lv10.md`, importable as `@u83ism/architecture-rules/rules/lv5.md`). Kaachan's `export:rules` is to render them for each target tool (`RULES_TARGETS`, `renderRulesForTarget`) instead of keeping its own constraint text (Phase 31; it currently uses hard-coded `LEVEL_CONSTRAINTS` and the targets `claude` / `cursor` / `cline` / `gemini`).
+The rules templates live in the shared package (`rules/_content/lv1.md` … `lv10.md`, importable as `@u83ism/architecture-rules/rules/lv5.md`). Kaachan's `export:rules` is to render them for each target tool (`RULES_TARGETS`, `renderRulesForTarget`) instead of keeping its own constraint text (Phase 36; it currently uses hard-coded `LEVEL_CONSTRAINTS` and the targets `claude` / `cursor` / `cline` / `gemini`).
 
 ### Threshold Synchronization
 

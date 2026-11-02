@@ -712,7 +712,7 @@ Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors o
 
 ### Phase 26 — Scanner: current folder structure ✅
 
-- Recognize domains as the folders directly under `domains/`, coordinators as the folders directly under `orchestrate/` (`FOLDER_NAMES.DOMAINS`, `FOLDER_NAMES.ORCHESTRATE`). Non-kebab-case names are still recognized, so that `folder-name-not-kebab-case` (Phase 30) can report them
+- Recognize domains as the folders directly under `domains/`, coordinators as the folders directly under `orchestrate/` (`FOLDER_NAMES.DOMAINS`, `FOLDER_NAMES.ORCHESTRATE`). Non-kebab-case names are still recognized, so that `folder-name-not-kebab-case` (Phase 31) can report them
 - `hasRepository` → `hasStore` (`LAYER_FILES.STORE`); `crossFolders` → `orchestrateFolders` (name + absolute path)
 - Collect the paths of each layer file wherever it lives (`snapshot.layerFiles`): the source root, `app/`, `shared/`, each domain and its `command/` / `query/`, and each coordinator; `logic/` and `parse/` folders included (store, workflow, parse, logic). Rules currently hard-code `join(sourceRoot, "repository.ts")` etc., so from Lv6 they find nothing — e.g. the Lv6 error escalation of `store-naming` / `store-orm-return-type` would never fire. Rules switched to these lists in Phase 28
 - Level detection reads `LEVEL_DEFINITIONS` (`getLevelDefinition`) for evidence labels and the files/folders missing for the next level, instead of duplicating them in `src/level/detector.ts`
@@ -743,7 +743,7 @@ Since Phase 27 the severities and active levels already follow the catalog (e.g.
 | `workflow-throws-plain-error` | The message always said "use Result err" (wrong advice in Lv3–4) | The message depends on the level — Lv3–4: throw a typed `DomainError`, Lv5+: return `err()` up to the route |
 | `logic-store-client-import` | `logic-imports` flagged only specifiers whose last segment is `store` or `client` | Also flags DB/ORM package imports |
 
-- All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read `snapshot.layerFiles` instead of fixed root paths, so they keep working after the Lv6 domain split (e.g. `store-naming` now reports an error for `domains/user/store.ts` at Lv6). A file inside `logic/` / `parse/` gets the folder checks, a `logic.ts` / `parse.ts` the single-file checks. New rules in Phase 30 do the same
+- All rules on layer files (`store-*`, `workflow-*`, `parse-*`, `logic-*`) read `snapshot.layerFiles` instead of fixed root paths, so they keep working after the Lv6 domain split (e.g. `store-naming` now reports an error for `domains/user/store.ts` at Lv6). A file inside `logic/` / `parse/` gets the folder checks, a `logic.ts` / `parse.ts` the single-file checks. New rules in Phases 30–35 do the same
 - The ORM package list, the subpath-aware ORM import check (`drizzle-orm/pg-core` counts) and source file loading live in `src/analysis/layer-modules.ts` instead of four copies
 - `domain-undeclared-import` moved to Phase 29, because it needs the dependency declaration
 - New fixtures `lv3-workflow-new-error/` and `lv6-domain-layer-files/`; `lv2-violations/route.ts` now has three DB-calling handlers and one thin handler
@@ -754,48 +754,74 @@ Since Phase 27 the severities and active levels already follow the catalog (e.g.
 - The result is passed to rules as `RuleContext.slimeConfig` (`{ kind: "missing" }` or `{ kind: "found", domains, tables }`). `slime-config-hint` uses it instead of checking the file itself
 - A `slime.config.ts` that cannot be read statically stops the analysis (`analyze` returns an error, the CLI exits 1). Reading nothing would make every declared dependency look undeclared
 - `domain-undeclared-import` (moved from Phase 28) allows the imports declared in `domains`. Without a declaration, every domain-to-domain import is still an error. `app/` and `orchestrate/` are not checked, since they may import any domain
-- `tables` is read but not used yet; the `table-*` rules and `domain-dependency-cycle` come in Phase 30
+- `tables` is read but not used yet; `domain-dependency-cycle` comes in Phase 31 and the `table-*` rules in Phase 32
 - New fixtures `lv6-declared-deps/` and `lv6-unreadable-config/`; parser unit tests in `tests/unit/slime-config.test.ts`
 
-### Phase 30 — Unimplemented catalog rules (37)
+The 37 catalog rules not implemented yet are split into Phases 30–35, grouped by level and by what the detection needs. Implement in this order. Severities come from the catalog (Phase 27), and every rule on layer files reads `snapshot.layerFiles` (Phase 28). When a rule is implemented, remove its ID from `NOT_YET_IMPLEMENTED` in `tests/unit/registry.test.ts`.
 
-Implement in level order. Severities come from the catalog (Phase 27).
+### Phase 30 — Lv2–5 rules (8)
 
-- Lv2–5: `route-api-namespace`, `workflow-http-access`, `workflow-calls-parse`, `store-orm-param`, `store-generic-filter`, `store-call-in-loop`, `logic-missing-prefix`, `workflow-throws-domain-error`
-- Lv6: `folder-name-not-kebab-case`, `domain-dependency-cycle`, `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared`, `error-code-missing-prefix`, `shared-side-effects`, `shared-size`, `app-size`, `route-sunset-passed`, `domain-pair-coordinated`, `domain-folder-thin`
-- Lv7–8: `domain-imports-orchestrate`, `orchestrate-imports-orchestrate`, `defer-suggestion`, `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake`, `orchestrate-without-transaction`
-- Lv9–10: `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains`, `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file`
+- Route and workflow: `route-api-namespace`, `workflow-http-access`, `workflow-calls-parse`, `workflow-throws-domain-error`
+- Store: `store-orm-param`, `store-generic-filter`, `store-call-in-loop`
+- Logic: `logic-missing-prefix`
 
-Open thresholds for the two merge/re-cut hints (the catalog states them without numbers):
-
-- `domain-pair-coordinated` — how many co-occurrences of the same domain pair in `app/` or `orchestrate/` count as "repeatedly"
-- `domain-folder-thin` — what "very little in it" means (line count, number of layer files, or both)
-
-Detection notes for the store and table rules:
+Detection notes:
 
 - `store-orm-param` — the same ORM type detection as `store-orm-return-type`, applied to parameter types (ORM `where` input types, query builders)
 - `store-generic-filter` — flag filter/query types whose field-name or operator properties are typed as `string` instead of a union of literals
 - `store-call-in-loop` — a call to a store function inside `for` / `for...of` / `while` or a callback passed to `forEach` / `map` / etc. Hint only: the loop count is unknown statically, and actual N+1 detection belongs to Slime FW runtime metrics
-- `table-*` — tables are identified by ORM model names in store code (e.g. `prisma.user.*` → `user`); writes vs. reads are told apart by the ORM method name. Lv10 `query/` read-side adapters are exempt from `table-foreign-read`, and from Lv9 the rules apply to `infrastructure/<domain>/` adapters instead of `store.ts`
-- Lv10 structure detection must expect one query per file under `query/` (`userList.ts`), not `query/workflow.ts`
+
+### Phase 31 — Lv6 structure and the domain DAG (7)
+
+- `folder-name-not-kebab-case`, `domain-dependency-cycle` (cycles in `domains` of `slime.config.ts`, read in Phase 29), `error-code-missing-prefix`, `shared-side-effects`, `shared-size`, `app-size`, `route-sunset-passed`
+
+### Phase 32 — Lv6 table ownership (4)
+
+- `table-foreign-write`, `table-foreign-read`, `table-owner-duplicate`, `table-owner-undeclared` (uses `tables` of `slime.config.ts`, read in Phase 29)
+
+Detection notes:
+
+- Tables are identified by ORM model names in store code (e.g. `prisma.user.*` → `user`); writes vs. reads are told apart by the ORM method name
+- Lv10 `query/` read-side adapters are exempt from `table-foreign-read`, and from Lv9 the rules apply to `infrastructure/<domain>/` adapters instead of `store.ts`
+
+### Phase 33 — Lv6 domain merge / re-cut hints (2)
+
+- `domain-pair-coordinated`, `domain-folder-thin`
+
+Both are hints, and the catalog states them without numbers. Decide the thresholds before implementing:
+
+- `domain-pair-coordinated` — how many co-occurrences of the same domain pair in `app/` or `orchestrate/` count as "repeatedly"
+- `domain-folder-thin` — what "very little in it" means (line count, number of layer files, or both)
+
+### Phase 34 — Lv7–8 rules (7)
+
+- Coordinators: `domain-imports-orchestrate`, `orchestrate-imports-orchestrate`, `orchestrate-without-transaction`, `defer-suggestion`
+- Events: `events-file-missing`, `events-imports-domain`, `event-type-not-upper-snake`
+
+### Phase 35 — Lv9–10 rules (9)
+
+- Lv9: `infrastructure-missing`, `domain-imports-infrastructure`, `ports-has-implementation`, `store-remains`
+- Lv10: `cqrs-folders-missing`, `query-imports-write-port`, `query-writes`, `command-returns-view-model`, `query-multiple-per-file`
+
+Detection note: Lv10 structure detection must expect one query per file under `query/` (`userList.ts`), not `query/workflow.ts`.
 
 Not in the catalog yet (proposals in the theory repository, do not implement until they land in `RULE_CATALOG`):
 
 - Capability-gated rules (`requires: Capability[]` on `RuleDefinition`, capabilities detected from code): `queue-*`, `defer-enqueue`, `outbox-outside-transaction` (「非同期・キュー導入 設計方針」) and `job-*` (「Slime FW詳細設計」 — job management)
 
-### Phase 31 — `export:rules` from the shared templates
+### Phase 36 — `export:rules` from the shared templates
 
 - Replace the hard-coded `LEVEL_CONSTRAINTS` in `src/cli/export-rules.ts` with the shared templates (`rulesTemplateSpecifier`, `renderRulesForTarget`, `RULES_TARGETS`), so generated rules files carry the same guidance as `rules/_content/lv*.md`
 - Reconcile the target list: Kaachan has `claude` / `cursor` / `cline` / `gemini`; the shared package has `claude` / `codex` / `gemini` / `cursor`
 - Validate `--target` against the target IDs and exit with an error for unknown values (it is currently cast to the type unchecked)
 - Existing files at the destination are overwritten as a whole, as today (decided 2026-11-02; no marker-based partial replacement)
 
-### Phase 32 — Docs sync ✅
+### Phase 37 — Docs sync ✅
 
 - The theory repository was renamed from `kaachan-and-slime-docs` to `slime-architecture-rules`: updated `CLAUDE.md`, `README.md` and `.claude/skills/sync-docs/SKILL.md`
 - Ran `sync-docs` from `95f0734` to `4216d45` (2026-11-02) and updated `overview.md` / `kaachan-design.md`
 
-Order: 26 → 27 → 28 → 29 → 30. Phases 31 and 32 are independent.
+Order: 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35. Phases 36 and 37 are independent.
 
 ---
 
