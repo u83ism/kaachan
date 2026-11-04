@@ -36,6 +36,12 @@ The opinionated, persistent nature of its feedback is why it is named "Kaachan" 
 
 ## Usage
 
+Kaachan is not published to npm yet. Install it from a local clone, which must be built first (`npm install` in the clone builds `dist/` through `prepare`). The consumer links to the clone, so after changing Kaachan, run `npm run build` (or `npx tsc -p tsconfig.build.json --watch`) to pick up the change.
+
+```bash
+npm i -D ../kaachan       # in the consumer project
+```
+
 ```bash
 npx kaachan               # analyze current directory
 npx kaachan ./src         # analyze specific path

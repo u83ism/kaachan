@@ -3,14 +3,23 @@
   "version": "0.1.0",
   "description": "Design linter for Slime Architecture — detects Fat Logic, Fat Workflow, and Fat Parse with escalating hint/warning/error feedback.",
   "type": "module",
-  "main": "./src/core/index.ts",
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
   "exports": {
-    ".": "./src/core/index.ts"
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    }
   },
   "bin": {
-    "kaachan": "./src/cli/index.ts"
+    "kaachan": "./dist/cli/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
     "dev": "tsx watch src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -20,11 +29,11 @@
     "@u83ism/architecture-rules": "file:../slime-architecture-rules",
     "commander": "^12.0.0",
     "ts-morph": "^23.0.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "tsx": "^4.21.0",
     "vitest": "^1.0.0"
   },
   "engines": {

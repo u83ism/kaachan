@@ -3,3 +3,5 @@ node_modules/
 
 memory/
 .claude/settings.local.json
+dist/
+
