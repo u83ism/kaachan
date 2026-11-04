@@ -33,6 +33,7 @@ The opinionated, persistent nature of its feedback is why it is named "Kaachan" 
 | [`kaachan-design.md`](./docs/kaachan-design.md) | Kaachan linter specification (rules, thresholds, detection strategies) |
 | [`static-vs-llm.md`](./docs/static-vs-llm.md) | What Kaachan detects statically and what is left to the AI via rules files |
 | [`feedback-emoji-rogue.md`](./docs/feedback-emoji-rogue.md) | Requirements from the first non-web adoption attempt |
+| [`feedback-among-us-stats.md`](./docs/feedback-among-us-stats.md) | Findings from the trial adoption in a Next.js + Hono app |
 
 ## Usage
 
