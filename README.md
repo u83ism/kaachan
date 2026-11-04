@@ -83,7 +83,7 @@ Both `rootDir/*.ts` and `rootDir/src/*.ts` are treated transparently.
 
 ## Rules
 
-Diagnostics use the rule IDs of `RULE_CATALOG` in `@u83ism/architecture-rules` (78 rules), and the severity of each rule at each level comes from the catalog — Kaachan only detects. A rule that is not active at the detected level is not reported. The full list with severities per level is in the theory repository (`docs/ja/Lv別アーキテクチャリファレンス.md`, "Kaachan検査項目と重大度の一覧").
+Diagnostics use the rule IDs of `RULE_CATALOG` in `@u83ism/architecture-rules` (80 rules), and the severity of each rule at each level comes from the catalog — Kaachan only detects. A rule that is not active at the detected level is not reported. The full list with severities per level is in the theory repository (`docs/ja/Lv別アーキテクチャリファレンス.md`, "Kaachan検査項目と重大度の一覧").
 
 Kaachan groups the checks into modules. A module runs when at least one of its rules is active at the detected level:
 
@@ -108,6 +108,7 @@ Kaachan groups the checks into modules. A module runs when at least one of its r
 | `logic-tests` | `logic-test-missing` |
 | `dep-direction` | `domain-undeclared-import`, `shared-imports-domain`, `domain-dependency-cycle` |
 | `folder-names` | `folder-name-not-kebab-case` |
+| `layer-file-names` | `layer-file-typo`, `layer-file-unknown` |
 | `error-codes` | `error-code-missing-prefix` |
 | `shared-layer` | `shared-side-effects`, `shared-size` |
 | `route-sunset` | `route-sunset-passed` |

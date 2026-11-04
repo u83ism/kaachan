@@ -36,6 +36,7 @@ import { transactionsRule } from "./implementations/transactions.js"
 import { portsAdaptersRule } from "./implementations/ports-adapters.js"
 import { cqrsSidesRule } from "./implementations/cqrs-sides.js"
 import { domainMergeHintsRule } from "./implementations/domain-merge-hints.js"
+import { layerFileNamesRule } from "./implementations/layer-file-names.js"
 
 export const BUILT_IN_RULES: readonly Rule[] = [
   fatWorkflowRule,
@@ -73,6 +74,7 @@ export const BUILT_IN_RULES: readonly Rule[] = [
   portsAdaptersRule,
   cqrsSidesRule,
   domainMergeHintsRule,
+  layerFileNamesRule,
 ]
 
 export const registerRule = (rules: readonly Rule[], rule: Rule): readonly Rule[] => [

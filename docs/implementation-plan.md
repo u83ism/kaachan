@@ -707,9 +707,9 @@ Second inventory taken 2026-11-02 (`sync-docs` up to `4216d45`, 10 more commits)
 - `6bb8ec8` — Lv10 `query/` holds one query per file (`userList.ts`, `userDetail.ts`) instead of `query/workflow.ts`
 - The catalog now has 79 rules
 
-Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced). After Phase 33 (2026-11-02): all 79 catalog rules are implemented and all 336 tests pass. After Phase 38 (2026-11-03): 78 catalog rules, all 335 tests pass.
+Status (2026-10-25): the dependency was switched to `file:../slime-architecture-rules` on branch `catch-up-architecture-rules`. On that branch `src/core/scanner.ts` no longer compiles (`FOLDER_PATTERNS.CROSS_PREFIX`, `FOLDER_PATTERNS.DOMAIN`, `LAYER_FILES.REPOSITORY` were removed), which fails 97 of 234 tests. On `main` (0.1.0) all 234 tests pass. After Phase 26 (2026-11-02): `src/` typechecks clean and all 254 tests pass. After Phase 28 (2026-11-02): all 263 tests pass. After Phase 29 (2026-11-02): all 271 tests pass. After Phase 30 (2026-11-02): all 288 tests pass. After Phase 31 (2026-11-02): all 305 tests pass. After Phase 32 (2026-11-02): all 314 tests pass. After Phase 34 (2026-11-02): all 325 tests pass. After Phase 35 (2026-11-02): all 336 tests pass. After Phase 36 (2026-11-02): all 332 tests pass (the old `generateRulesContent` tests were replaced). After Phase 33 (2026-11-02): all 79 catalog rules are implemented and all 336 tests pass. After Phase 38 (2026-11-03): 78 catalog rules, all 335 tests pass. After Phase 39 (2026-11-05): 80 catalog rules, all 342 tests pass.
 
-The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported). Rebuilt again on 2026-11-03 at `384499b` (78 rules, Lv9 without `infrastructure/`).
+The sibling checkout's `dist/` is gitignored, so it must be rebuilt (`npm run build` in `slime-architecture-rules`) whenever the source changes. Rebuilt on 2026-11-02 at `4216d45` (79 rules, `TableOwnership` exported). Rebuilt again on 2026-11-03 at `384499b` (78 rules, Lv9 without `infrastructure/`), and on 2026-11-05 at `f4ce1fc` (80 rules, `RECOGNIZED_FILES` / `LAYER_FILE_TYPO_DISTANCE` exported).
 
 Pre-existing, unrelated to the catch-up: `npm run typecheck` reports 27 errors on `main` — 24 in `tests/fixtures/` (fixtures are type-checked although they import packages that are not installed or omit `.js` extensions) and 3 in `tests/unit/type-dependency-graph.test.ts` (`.sort()` on `readonly string[]`).
 
@@ -888,11 +888,26 @@ Follows the theory repository's change (2026-11-03, "plan A"), which removed two
 - `infrastructure-missing` is tested with real analysis on the new fixture `lv9-no-infrastructure/` (`ports.ts`, no `infrastructure/`), instead of a fixed level. Its message now says the migration is unfinished
 - The catalog summaries of `shared-size`, `app-size`, `app-route-size` (500 lines) and `cqrs-folders-missing` (upstream domains exempt) now state what Kaachan already does; Kaachan's messages needed no change
 
+### Phase 39 — Layer file names (2) ✅
+
+Follows the theory repository's `f4ce1fc` (2026-11-04), which added `RECOGNIZED_FILES` (the file names recognized in each layer location, union of all levels) and `LAYER_FILE_TYPO_DISTANCE`.
+
+| Rule | Module | Detection |
+|---|---|---|
+| `layer-file-typo` | `layer-file-names` | A file in a layer location whose name is within the Damerau–Levenshtein distance of a recognized name (compared without the extension, case, `-` and `_`; 1 for recognized names up to 6 characters, 2 above) but does not match it. Test files are compared without `.test` / `.spec`, and the suggestion keeps the suffix |
+| `layer-file-unknown` | `layer-file-names` | A file in a layer location that is neither recognized nor close to a recognized name. The suggestion lists the recognized names of the location with the role of each layer. Test files are not reported |
+
+- Layer locations are matched against `snapshot.sourceFiles` relative to the source root, with `*` as one folder (`domains/*`, `domains/*/command`, `orchestrate/*`); the scanner did not change. Folders that are not layer locations (`logic/`, `parse/`, `query/`, `infrastructure/`, user folders) are not checked
+- `*.d.ts` and `*.config.ts` are skipped: they are not layer files, and without `src/` the project root (`vitest.config.ts` etc.) is the source root
+- Barrel files such as `domains/user/index.ts` are reported by `layer-file-unknown`, since `index.ts` is recognized only in the source root. Many existing Lv6+ fixtures have such barrels; no test counted all of their diagnostics, so none changed
+- The edit distance lives in `src/analysis/edit-distance.ts`
+- Fixtures: `layer-file-names-lv2/`, `layer-file-names-lv3/`, `layer-file-names-lv6/`
+
 ---
 
 ## Rule Activation Summary
 
-Since Phase 27 the activation level and severity of every rule come from `RULE_CATALOG`, and since Phase 33 every catalog rule (78 since Phase 38) is reported by a module. The module → catalog rule table is in README.md ("Rules"); `tests/unit/registry.test.ts` checks that every catalog rule belongs to exactly one module.
+Since Phase 27 the activation level and severity of every rule come from `RULE_CATALOG`, and since Phase 33 every catalog rule (80 since Phase 39) is reported by a module. The module → catalog rule table is in README.md ("Rules"); `tests/unit/registry.test.ts` checks that every catalog rule belongs to exactly one module.
 
 ---
 
